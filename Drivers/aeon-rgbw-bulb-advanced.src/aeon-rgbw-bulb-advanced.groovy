@@ -31,6 +31,8 @@ metadata {
 		command "reset"
 		command "refresh"
         
+        attribute "currentFirmware", "String"
+        
         (1..6).each { n ->
 			attribute "switch$n", "enum", ["on", "off"]
 			command "on$n"
@@ -161,7 +163,7 @@ def updated()
     
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     
-    if (cmds != []) response(commands(cmds))
+    if (cmds != []) commands(cmds)
 }
 
 def configure() {
@@ -670,7 +672,7 @@ def generate_preferences(configuration_model)
                     displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title: it.@label != "" ? "${it.@label}\n" + "${it.Help}" : "" + "${it.Help}",
                     defaultValue: "${it.@value}",
                     displayDuringSetup: "${it.@displayDuringSetup}"
@@ -762,7 +764,7 @@ def convertParam(number, value) {
 }
 
 private def logging(message) {
-    if (state.enableDebugging == null || state.enableDebugging == "true") log.debug "$message"
+    if (state.enableDebugging == null || state.enableDebugging == true) log.debug "$message"
 }
 
 /**
