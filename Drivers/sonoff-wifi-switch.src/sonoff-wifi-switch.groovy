@@ -31,6 +31,8 @@ metadata {
         command "reboot"
         
         attribute   "needUpdate", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
 	}
 
 	simulator {
@@ -85,6 +87,7 @@ def configure() {
     logging("configure()", 1)
     def cmds = []
     cmds = update_needed_settings()
+    cmds << getAction("/info")
     if (cmds != []) cmds
 }
 
@@ -95,7 +98,7 @@ def updated()
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    if (cmds != []) response(cmds)
+    if (cmds != []) cmds
 }
 
 private def logging(message, level) {
@@ -115,13 +118,16 @@ private def logging(message, level) {
 def parse(description) {
 	//log.debug "Parsing: ${description}"
     def events = []
+    def msg = parseLanMessage(description)
+
     def descMap = parseDescriptionAsMap(description)
     def body
     //log.debug "descMap: ${descMap}"
 
-    if (!state.mac || state.mac != descMap["mac"]) {
+    if (descMap["mac"] != null && (!state.mac || state.mac != descMap["mac"])) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
         updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -144,6 +150,9 @@ def parse(description) {
     }
     if (result.containsKey("uptime")) {
         events << createEvent(name: "uptime", value: result.uptime, displayed: false)
+    }
+    if (result.containsKey("deviceType")) {
+        state.type = result.deviceType
     }
     } else {
         //log.debug "Response is not JSON: $body"
@@ -181,6 +190,7 @@ def off() {
 def refresh() {
 	log.debug "refresh()"
     def cmds = []
+    cmds << getAction("/info")
     cmds << getAction("/status")
     return cmds
 }
@@ -193,37 +203,43 @@ def ping() {
 private getAction(uri){ 
   updateDNI()
   def userpass
-  //log.debug uri
+  def response
   if(password != null && password != "") 
-    userpass = encodeCredentials("admin", password)
+      userpass = encodeCredentials("admin", password)
     
   def headers = getHeader(userpass)
-
-  def hubAction = new hubitat.device.HubAction(
-    method: "GET",
-    path: uri,
+    
+  def params = [
+    uri: "http://${getHostAddress()}${uri}",
     headers: headers
-  )
-  return hubAction    
+  ]
+
+  httpGet(params) { resp ->
+    response = resp.data
+  }
+
+  return parseResponse(response)    
 }
 
 private postAction(uri, data){ 
   updateDNI()
-  
   def userpass
-  
+  def response
   if(password != null && password != "") 
-    userpass = encodeCredentials("admin", password)
-  
+      userpass = encodeCredentials("admin", password)
+    
   def headers = getHeader(userpass)
-  
-  def hubAction = new hubitat.device.HubAction(
-    method: "POST",
-    path: uri,
-    headers: headers,
-    body: data
-  )
-  return hubAction    
+    
+  def params = [
+    uri: "http://${getHostAddress()}${uri}",
+    headers: headers
+  ]
+
+  httpPost(params) { resp ->
+    response = resp.data
+  }
+
+  parseResponse(response)      
 }
 
 private setDeviceNetworkId(ip, port = null){
@@ -268,7 +284,7 @@ private String convertPortToHex(port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
@@ -373,38 +389,77 @@ def update_needed_settings()
 {
     def cmds = []
     def currentProperties = state.currentProperties ?: [:]
-     
+
     def configuration = new XmlSlurper().parseText(configuration_model())
     def isUpdateNeeded = "NO"
-    
+
     cmds << getAction("/configSet?name=haip&value=${device.hub.getDataValue("localIP")}")
     cmds << getAction("/configSet?name=haport&value=${device.hub.getDataValue("localSrvPortTCP")}")
-    
+
     configuration.Value.each
-    {     
+    {
         if ("${it.@setting_type}" == "lan" && it.@disabled != "true"){
             if (currentProperties."${it.@index}" == null)
             {
-               if (it.@setonly == "true"){
-                  logging("Setting ${it.@index} will be updated to ${it.@value}", 2)
-                  cmds << getAction("/configSet?name=${it.@index}&value=${it.@value}")
-               } else {
-                  isUpdateNeeded = "YES"
-                  logging("Current value of setting ${it.@index} is unknown", 2)
-                  cmds << getAction("/configGet?name=${it.@index}")
-               }
+                if (it.@setonly == "true"){
+                    logging("Setting ${it.@index} will be updated to ${it.@value}", 2)
+                    cmds << getAction("/configSet?name=${it.@index}&value=${it.@value}")
+                } else {
+                    if (it.@index == "externaltype") {
+                        if(state.type != "Sonoff S20") {
+                            isUpdateNeeded = "YES"
+                            logging("Current value of setting ${it.@index} is unknown", 2)
+                            cmds << getAction("/configGet?name=${it.@index}")
+                        } else {
+                            log.debug "Sonoff S20 does not support externatype configuration"
+                        }
+                    } else {
+                        isUpdateNeeded = "YES"
+                        logging("Current value of setting ${it.@index} is unknown", 2)
+                        cmds << getAction("/configGet?name=${it.@index}")
+                    }
+                }
             }
             else if ((settings."${it.@index}" != null || it.@hidden == "true") && currentProperties."${it.@index}" != (settings."${it.@index}"? settings."${it.@index}".toString() : "${it.@value}"))
-            { 
+            {
                 isUpdateNeeded = "YES"
                 logging("Setting ${it.@index} will be updated to ${settings."${it.@index}"}", 2)
                 cmds << getAction("/configSet?name=${it.@index}&value=${settings."${it.@index}"}")
-            } 
+            }
         }
     }
-    
+
     sendEvent(name:"needUpdate", value: isUpdateNeeded, displayed:false, isStateChange: true)
     return cmds
+}
+
+def parseResponse(description) {
+	//log.debug "Parsing: ${description}"
+    def events = []
+    def result = description
+    log.debug "result: ${result}"
+    if (result != []){
+    if (result.containsKey("type")) {
+        if (result.type == "configuration")
+            events << update_current_properties(result)
+    }
+    if (result.containsKey("power")) {
+        events << createEvent(name: "switch", value: result.power)
+    }
+    if (result.containsKey("uptime")) {
+        events << createEvent(name: "uptime", value: result.uptime, displayed: false)
+    }
+    if (result.containsKey("deviceType")) {
+        state.type = result.deviceType
+    }
+    }
+
+
+    if (!device.currentValue("ip") || (device.currentValue("ip") != getDataValue("ip"))) events << createEvent(name: 'ip', value: getDataValue("ip"))
+    events.each {
+        sendEvent(it)   
+    }
+    return events
 }
 
 def configuration_model()
@@ -423,14 +478,14 @@ Default: Off
     <Item label="On" value="1" />
     <Item label="Previous" value="2" />
 </Value>
-<Value type="number" byteSize="1" index="autooff" label="Auto Off" min="0" max="65536" value="0" setting_type="lan" fw="">
+<Value type="number" byteSize="1" index="autooff1" label="Auto Off" min="0" max="65536" value="0" setting_type="lan" fw="">
 <Help>
 Automatically turn the switch off after this many seconds.
 Range: 0 to 65536
 Default: 0 (Disabled)
 </Help>
 </Value>
-<Value type="list" byteSize="1" index="switchtype" label="External Switch Type" min="0" max="1" value="0" setting_type="lan" fw="">
+<Value type="list" byteSize="1" index="externaltype" label="External Switch Type" min="0" max="1" value="0" setting_type="lan" fw="">
 <Help>
 If a switch is attached to GPIO 14.
 Default: Momentary
