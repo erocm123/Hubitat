@@ -13,7 +13,9 @@
  *  Sonoff TH Wifi Switch
  *
  *  Author: Eric Maycock (erocm123)
- *  Date: 2017-06-14
+ *  Date: 2018-07-10
+ *
+ *  2018-07-10: Fixes for Hubitat
  *
  *  2017-06-14: Added option to set frequency of temperature and humidity reports.
  *              Added option to use an external connected switch in place of a temperature/humidity sensor.
@@ -39,6 +41,8 @@ metadata {
         command "reboot"
                 
         attribute   "needUpdate", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
 	}
 
 	simulator {
@@ -106,6 +110,7 @@ def configure() {
     logging("configure()", 1)
     def cmds = []
     cmds = update_needed_settings()
+    cmds << getAction("/info")
     if (cmds != []) cmds
 }
 
@@ -118,7 +123,7 @@ def updated()
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     if (state.realTemperature != null) sendEvent(name:"temperature", value: getAdjustedTemp(state.realTemperature))
     if (state.realHumidity != null) sendEvent(name:"humidity", value: getAdjustedHumidity(state.realHumidity))
-    if (cmds != []) response(cmds)
+    if (cmds != []) cmds
 }
 
 private def logging(message, level) {
@@ -145,6 +150,7 @@ def parse(description) {
     if (!state.mac || state.mac != descMap["mac"]) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
         updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -179,12 +185,15 @@ def parse(description) {
         }
     }
     if (result.containsKey("humidity")) {
-        if (result.temperature != "nan") {
+        if (result.humidity != "nan") {
             state.realHumidity = Math.round((result.humidity as Double) * 100) / 100
             events << createEvent(name: "humidity", value:"${getAdjustedHumidity(state.realHumidity)}", unit:"%")
         } else {
             log.debug "The humidity sensor is reporting \"nan\""
         }
+    }
+    if (result.containsKey("deviceType")) {
+        state.type = result.deviceType
     }
     } else {
         //log.debug "Response is not JSON: $body"
@@ -252,6 +261,7 @@ def refresh() {
 	log.debug "refresh()"
     def cmds = []
     cmds << getAction("/status")
+    cmds << getAction("/info")
     return cmds
 }
 
@@ -273,7 +283,8 @@ private getAction(uri){
   def hubAction = new hubitat.device.HubAction(
     method: "GET",
     path: uri,
-    headers: headers
+    headers: headers,
+    //body: "\r\n\r\n"
   )
   return hubAction    
 }
@@ -339,16 +350,15 @@ private String convertPortToHex(port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
 private getHeader(userpass = null){
     def headers = [:]
-    headers.put("Host", getHostAddress())
-    headers.put("Content-Type", "application/x-www-form-urlencoded")
     if (userpass != null)
        headers.put("Authorization", userpass)
+    headers.put("Host", getHostAddress())
     return headers
 }
 
