@@ -109,7 +109,7 @@ def updated()
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    if (cmds != []) response(cmds)
+    if (cmds != []) return cmds
 }
 
 private def logging(message, level) {
@@ -136,6 +136,7 @@ def parse(description) {
     if (!state.mac || state.mac != descMap["mac"]) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
         updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -295,16 +296,15 @@ private String convertPortToHex(port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
 private getHeader(userpass = null){
     def headers = [:]
-    headers.put("Host", getHostAddress())
-    headers.put("Content-Type", "application/x-www-form-urlencoded")
     if (userpass != null)
        headers.put("Authorization", userpass)
+    headers.put("Host", getHostAddress())
     return headers
 }
 
