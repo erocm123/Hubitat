@@ -178,7 +178,8 @@ def parse(description) {
     }
     if (result.containsKey("temperature")) {
         if (result.temperature != "nan") {
-            state.realTemperature = convertTemperatureIfNeeded(result.temperature.toFloat(), result.scale)
+            //state.realTemperature = convertTemperatureIfNeeded(result.temperature.toFloat(), result.scale)
+            state.realTemperature = result.temperature.toFloat()
             events << createEvent(name:"temperature", value:"${getAdjustedTemp(state.realTemperature)}", unit:"${location.temperatureScale}")
         } else {
             log.debug "The temperature sensor is reporting \"nan\""
