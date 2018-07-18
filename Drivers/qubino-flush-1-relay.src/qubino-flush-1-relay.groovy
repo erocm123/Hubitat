@@ -61,7 +61,7 @@ metadata {
            		attributeState "statusText", label:'${currentValue}'       		
             }
 	    }
-        childDeviceTiles("all")
+
         valueTile("power", "device.power", decoration: "flat", width: 2, height: 2) {
 			state "default", label:'${currentValue} W'
 		}
@@ -607,7 +607,7 @@ private void createChildDevices() {
 	state.oldLabel = device.label
     try {
 	   for (i in 2..3) {
-          addChildDevice("erocm123", "Contact Sensor Child Device", "${device.deviceNetworkId}-i${i}", null,
+          addChildDevice("erocm123", "Contact Sensor Child Device", "${device.deviceNetworkId}-i${i}", 
 			 [completedSetup: true, label: "${device.displayName} (i${i})",
 		     isComponent: true, componentName: "i$i", componentLabel: "Input $i"])
 	   }
