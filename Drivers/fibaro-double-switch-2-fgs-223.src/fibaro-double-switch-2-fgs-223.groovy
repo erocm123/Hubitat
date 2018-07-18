@@ -36,6 +36,11 @@ definition (name: "Fibaro Double Switch 2 FGS-223", namespace: "erocm123", autho
     capability "HoldableButton"
 
     command "reset"
+    command "childOn"
+        command "childOff"
+        command "childRefresh"
+	command "childReset"
+
 
     fingerprint mfr: "010F", prod: "0203", model: "2000", deviceJoinName: "Fibaro Double Switch 2"
     fingerprint mfr: "010F", prod: "0203", model: "1000", deviceJoinName: "Fibaro Double Switch 2"
@@ -77,7 +82,7 @@ tiles(scale: 2){
 	}
     
     main(["switch"])
-    details(["switch", childDeviceTiles("all"),
+    details(["switch", 
              "refresh","reset","configure"])
 
 }
@@ -367,36 +372,36 @@ def off() {
     ])
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     logging("childOn($dni)")
     def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     logging("childOff($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
-void childRefresh(String dni) {
+def childRefresh(String dni) {
     logging("childRefresh($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
-void childReset(String dni) {
+def childReset(String dni) {
     logging("childReset($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterReset(), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterReset(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
 private secure(hubitat.zwave.Command cmd) {
@@ -649,7 +654,7 @@ private void createChildDevices() {
 	state.oldLabel = device.label
      try {
         for (i in 1..2) {
-	       addChildDevice("Metering Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+	       addChildDevice("Metering Switch Child Device", "${device.deviceNetworkId}-ep${i}",
 		      [completedSetup: true, label: "${device.displayName} (S${i})",
 		      isComponent: false, componentName: "ep$i", componentLabel: "Switch $i"])
         }
