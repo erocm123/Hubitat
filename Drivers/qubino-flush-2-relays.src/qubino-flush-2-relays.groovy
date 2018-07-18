@@ -538,7 +538,7 @@ private void createChildDevices() {
     state.oldLabel = device.label
     try {
         for (i in 1..2) {
-            addChildDevice("Metering Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+            addChildDevice("Metering Switch Child Device", "${device.deviceNetworkId}-ep${i}", 
                 [completedSetup: true, label: "${device.displayName} (Q${i})",
                 isComponent: false, componentName: "ep$i", componentLabel: "Output $i"])
         }
