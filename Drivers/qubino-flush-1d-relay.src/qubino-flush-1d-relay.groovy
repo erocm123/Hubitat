@@ -55,7 +55,7 @@ metadata {
                 attributeState "statusText", label:'${currentValue}'
             }
         }
-        childDeviceTiles("all")
+
         valueTile("temperature", "device.temperature", inactiveLabel: false, width: 2, height: 2) {
             state "temperature", label:'${currentValue}°',
             backgroundColors:
@@ -450,7 +450,7 @@ private void createChildDevices() {
     state.oldLabel = device.label
     try {
         for (i in 2..2) {
-            addChildDevice("Contact Sensor Child Device", "${device.deviceNetworkId}-i${i}", null,
+            addChildDevice("Contact Sensor Child Device", "${device.deviceNetworkId}-i${i}",
                 [completedSetup: true, label: "${device.displayName} (i${i})",
                 isComponent: true, componentName: "i$i", componentLabel: "Input $i"])
         }
