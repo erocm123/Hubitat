@@ -29,6 +29,11 @@ metadata {
       capability "Configuration"
       capability "Refresh"
       capability "Health Check"
+	   
+      command "childOn"
+        command "childOff"
+        command "childRefresh"
+
       
       fingerprint mfr: "011A", prod: "0111", model: "0605", deviceJoinName: "Enerwave RSM2-Plus"
 
@@ -63,7 +68,6 @@ metadata {
 
     main(["switch"])
     details(["switch",
-             childDeviceTiles("all"),
              "refresh","configure","reset"
             ])
    }
@@ -212,29 +216,29 @@ def off() {
    ])
 }
 
-void childOn(String dni) {
+def childOn(String dni) {
     logging("childOn($dni)", 1)
     def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinarySet(switchValue: 0xFF), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinarySet(switchValue: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
-void childOff(String dni) {
+def childOff(String dni) {
     logging("childOff($dni)", 1)
 	def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinarySet(switchValue: 0x00), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinarySet(switchValue: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
-void childRefresh(String dni) {
+def childRefresh(String dni) {
     logging("childRefresh($dni)", 1)
 	def cmds = []
-    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))))
-    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))))
-	sendHubCommand(cmds, 1000)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+	cmds
 }
 
 def poll() {
@@ -550,7 +554,7 @@ private void createChildDevices() {
 	state.oldLabel = device.label
      try {
         for (i in 1..2) {
-	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", 
 		      [completedSetup: true, label: "${device.displayName} (R${i})",
 		      isComponent: false, componentName: "ep$i", componentLabel: "Relay $i"])
         }
