@@ -35,7 +35,7 @@ metadata {
         
 
 		main "contact"
-		details(["contact", childDeviceTiles("all")])
+		details(["contact"])
 	}
 	}
 
