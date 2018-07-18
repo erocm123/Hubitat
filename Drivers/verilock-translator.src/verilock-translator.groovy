@@ -40,7 +40,7 @@ metadata {
 		}
         
 		main "contact"
-		details(["contact", childDeviceTiles("all")])
+		details(["contact"])
 	}
 }
 
@@ -88,7 +88,7 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd, ep 
     def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep${ep}"}
     if (!childDevice) {
         log.debug "Child not found for endpoint. Creating one now"
-        childDevice = addChildDevice("Lockable Door/Window Child Device", "${device.deviceNetworkId}-ep${ep}", null,
+        childDevice = addChildDevice("Lockable Door/Window Child Device", "${device.deviceNetworkId}-ep${ep}",
                 [completedSetup: true, label: "${device.displayName} Window ${ep}",
                 isComponent: false, componentName: "ep$ep", componentLabel: "Window $ep"])
     }
