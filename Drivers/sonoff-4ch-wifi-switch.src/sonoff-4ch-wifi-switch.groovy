@@ -50,8 +50,6 @@ metadata {
 				attributeState "turningOff", label:'${name}', action:"switch.on", backgroundColor:"#ffffff", icon: "st.switches.switch.on", nextState:"turningOn"
 			}
         }
-        
-        childDeviceTiles("all")
 
 		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
 			state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -105,7 +103,7 @@ def updated()
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    if (cmds != []) response(cmds)
+    if (cmds != []) cmds
 }
 
 private def logging(message, level) {
@@ -455,7 +453,7 @@ private void createChildDevices() {
     if ( device.deviceNetworkId =~ /^([0-9A-F]{2}){6}$/) {
      try {
         for (i in 1..4) {
-	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", 
 		      [completedSetup: true, label: "${device.displayName} (R${i})",
 		      isComponent: false, componentName: "ep$i", componentLabel: "Relay $i"])
         }
