@@ -112,7 +112,7 @@ def configurePDevice(params){
    def currentDevice
    
    getChildDevices().each {
-               if(it.deviceNetworkId == params.did){
+               if(it.deviceNetworkId == params?.did){
                   state.currentDeviceId = it.deviceNetworkId
                   state.currentDisplayName = it.displayName
                }      
@@ -124,21 +124,21 @@ def configurePDevice(params){
 		section {
             app.updateSetting("${state.currentDeviceId}_label", getChildDevice(state.currentDeviceId).label)
             input "${state.currentDeviceId}_label", "text", title:"Device Name", description: "", required: false
-            href "changeName", title:"Change Device Name", description: "Edit the name above and click here to change it", params: [did: state.currentDeviceId]
+            href "changeName", title:"Change Device Name", description: "Edit the name above and click here to change it"
         }
         section {
-            href "configureProgramMain", title:"Configure Programs", description:"Configure Programs", params: [did: state.currentDeviceId]
+            href "configureProgramMain", title:"Configure Programs", description:"Configure Programs"
 		}
         section("Virtual Switches"){
            input "${state.currentDeviceId}_prefix", "text", title: "Virtual Switch Prefix", description: "Prefix for virtual switch names", required: false, defaultValue: "RGBW"
            if(!isVirtualConfigured(state.currentDeviceId)){
-              href "createVirtual", title:"Create Virtual Devices", description:"Create virtual devices", params: [did: state.currentDeviceId]
+              href "createVirtual", title:"Create Virtual Devices", description:"Create virtual devices"
            }else{
-              href "removeVirtual", title:"Remove Virtual Devices", description:"Remove virtual devices", params: [did: state.currentDeviceId]
+              href "removeVirtual", title:"Remove Virtual Devices", description:"Remove virtual devices"
            }
         }
         section {
-              href "deletePDevice", title:"Delete $state.currentDisplayName", description: "", params: [did: state.currentDeviceId]
+              href "deletePDevice", title:"Delete $state.currentDisplayName", description: ""
         }
         } else {
             if (getChildDevice(state.currentDeviceId) != null) getChildDevice(state.currentDeviceId).configure()
@@ -146,7 +146,7 @@ def configurePDevice(params){
                 paragraph "Device has not been fully configured. Please make sure the device is powered on and has the correct ip address. When confirmed, please come back to this page."
             }
             section {
-              href "deletePDevice", title:"Delete $state.currentDisplayName", description: "", params: [did: state.currentDeviceId]
+              href "deletePDevice", title:"Delete $state.currentDisplayName", description: ""
         }
         }
            
@@ -254,6 +254,7 @@ private discoverDevices() {
 }
 
 def configureProgramMain(){
+
    dynamicPage(name: "configureProgramMain", title: "Choose which program you would like to configure", nextPage: null) {
 		section {
    for (int i = 1; i <= 6; i++){
@@ -389,7 +390,7 @@ private getDeviceID(number) {
 }
 
 def configureProgram(params){
-   if (params.pnumber != null) state.currentProgram = params.pnumber.toInteger() //log.debug "$params.pbutton"
+   if (params?.pnumber != null) state.currentProgram = params.pnumber.toInteger() //log.debug "$params.pbutton"
    if (settings["importMe"] != "" && settings["importMe"] != null) {
       def t = settings["importMe"].split("_")
       def numberOfActions = 0
