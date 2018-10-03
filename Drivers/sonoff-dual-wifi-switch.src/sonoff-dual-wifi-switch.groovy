@@ -51,7 +51,6 @@ metadata {
 			}
         }
         
-        childDeviceTiles("all")
 
 		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
 			state "default", label:"", action:"refresh.refresh", icon:"st.secondary.refresh"
@@ -123,15 +122,13 @@ private def logging(message, level) {
 }
 
 def parse(description) {
-	//log.debug "Parsing: ${description}"
     def events = []
     def descMap = parseDescriptionAsMap(description)
     def body
-    //log.debug "descMap: ${descMap}"
 
-    if (!state.mac || state.mac != descMap["mac"]) {
-		logging("Mac address of device found ${descMap["mac"]}", 2)
-        updateDataValue("mac", descMap["mac"])
+    if (descMap["mac"] != null && (!state.mac || state.mac != descMap["mac"])) {
+		log.debug "Mac address of device found ${descMap["mac"]}"
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -455,7 +452,7 @@ private void createChildDevices() {
     if ( device.deviceNetworkId =~ /^([0-9A-F]{2}){6}$/) {
      try {
         for (i in 1..2) {
-	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", 
 		      [completedSetup: true, label: "${device.displayName} (R${i})",
 		      isComponent: false, componentName: "ep$i", componentLabel: "Relay $i"])
         }
