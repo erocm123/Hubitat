@@ -141,15 +141,12 @@ private def logging(message, level) {
 }
 
 def parse(description) {
-	//log.debug "Parsing: ${description}"
     def events = []
     def descMap = parseDescriptionAsMap(description)
     def body
-    //log.debug "descMap: ${descMap}"
 
-    if (!state.mac || state.mac != descMap["mac"]) {
+    if (descMap["mac"] != null && (!state.mac || state.mac != descMap["mac"])) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
-        updateDataValue("mac", descMap["mac"])
         state.mac = descMap["mac"]
 	}
     
