@@ -775,7 +775,7 @@ def configurePrograms(){
 }
 
 def virtualHandler(evt) {
-  log.debug "virtualHandler called with event: deviceId ${evt.deviceId} name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.isStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
+  log.debug "virtualHandler called with event: deviceId ${evt.deviceId} name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.getIsStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
   getChildDevices().each {
         if (evt.deviceId == it.id){
         if (evt.value == "off" && settings["${it.deviceNetworkId.split("/")[0]}_programs_${it.deviceNetworkId.split("/")[2]}_off"]?.toBoolean()){
@@ -788,7 +788,7 @@ def virtualHandler(evt) {
 }
 
 def physicalHandler(evt) {
-  log.debug "physicalHandler called with event:  name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.isStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
+  log.debug "physicalHandler called with event:  name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.getIsStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
   for (int i = 1; i <= 6; i++){
        if (evt.name == "switch${i}") {
                 getChildDevices().each {
