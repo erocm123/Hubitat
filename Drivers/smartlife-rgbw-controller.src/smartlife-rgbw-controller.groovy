@@ -250,10 +250,11 @@ def parse(description) {
     if(description == "updated") return
     def descMap = parseDescriptionAsMap(description)
 
-    if (!state.mac || state.mac != descMap["mac"]) {
+    if (descMap["mac"] != null && (!state.mac || state.mac != descMap["mac"])) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
-        updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
+    
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
     
     def body = new String(descMap["body"].decodeBase64())
