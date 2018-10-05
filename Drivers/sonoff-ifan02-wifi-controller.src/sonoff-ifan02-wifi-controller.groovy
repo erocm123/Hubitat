@@ -107,7 +107,7 @@ def updated()
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    if (cmds != []) response(cmds)
+    if (cmds != []) cmds
 }
 
 private def logging(message, level) {
