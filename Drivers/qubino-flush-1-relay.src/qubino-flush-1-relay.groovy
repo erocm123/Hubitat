@@ -192,7 +192,7 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
     logging("NotificationReport: $cmd", 2)
     def result
 
-	if (cmd.notificationType == 2 || cmd.notificationType == 3)
+	if (cmd.notificationType == 2 || cmd.notificationType == 3) {
     def children = childDevices
 	def childDevice = children.find{it.deviceNetworkId.endsWith("-i2")}
 		switch (cmd.event) {
