@@ -326,12 +326,12 @@ def updated()
 	}
     if (childDevices) {
         def childDevice = childDevices.find{it.deviceNetworkId.endsWith("-i2")}
-        if (childDevice && settings."i2" && settings."i2" != "Disabled"  && childDevice.typeName != settings."i2") {
-            childDevice.setDeviceType(settings."i2")
+        if (childDevice && settings."i2" && childDevice.typeName != settings."i2") {
+            changeChildDeviceType(childDevice, settings."i2", 2)
         }
         childDevice = childDevices.find{it.deviceNetworkId.endsWith("-i3")}
-        if (childDevice && settings."i3" && settings."i3" != "Disabled" && childDevice.typeName != settings."i3") {   
-            childDevice.setDeviceType(settings."i3")
+        if (childDevice && settings."i3" && childDevice.typeName != settings."i3") {
+            changeChildDeviceType(childDevice, settings."i3", 3)
         }
     }
     def cmds = [] 
@@ -566,6 +566,21 @@ private void createChildDevices() {
 	   }
     } catch (e) {
        runIn(2, "sendAlert")
+    }
+}
+
+private void changeChildDeviceType(childDevice, deviceType, i) {
+
+    log.debug "Changing ${childDevice} to ${deviceType}"
+    deleteChildDevice(childDevice.deviceNetworkId)
+    if (deviceType != "Disabled") {
+        try {
+            addChildDevice("erocm123", deviceType, "${childDevice.deviceNetworkId}", 
+                [completedSetup: true, label: "${childDevice.displayName}",
+                isComponent: true, componentName: "i$i", componentLabel: "Input $i"])
+        } catch (e) {
+            runIn(2, "sendAlert")
+        }
     }
 }
 
