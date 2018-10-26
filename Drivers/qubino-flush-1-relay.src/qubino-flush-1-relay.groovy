@@ -40,7 +40,7 @@ metadata {
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x86,0x72,0x5A,0x73,0x20,0x27,0x25,0x32,0x85,0x8E,0x59,0x70", outClusters: "0x20"
         fingerprint deviceId: "0x1001", inClusters: "0x5E,0x86,0x72,0x5A,0x73,0x20,0x27,0x25,0x32,0x31,0x60,0x85,0x8E,0x59,0x70", outClusters: "0x20" // With temp sensor
 	}
-    
+
     preferences {
         input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
 		generate_preferences(configuration_model())  
@@ -145,7 +145,7 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
     logging("NotificationReport: $cmd", 2)
     def result
 
-	if (cmd.notificationType == 2 || cmd.notificationType == 3) {
+    if (cmd.notificationType == 2 || cmd.notificationType == 3) {
     def children = childDevices
 	def childDevice = children.find{it.deviceNetworkId.endsWith("-i2")}
 		switch (cmd.event) {
@@ -170,6 +170,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "open")
                     break
+                    case "Momentary Button Child Device":
+                        childDevice.push()
+                    break
                 }
 			break
 			case 2:
@@ -192,6 +195,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     break
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "closed")
+                    break
+                    case "Momentary Button Child Device":
+                        childDevice.release()
                     break
                 }
 			break
@@ -222,6 +228,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "open")
                     break
+                    case "Momentary Button Child Device":
+                        childDevice.push()
+                    break
                 }
 			break
 			case 2:
@@ -244,6 +253,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     break
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "closed")
+                    break
+                    case "Momentary Button Child Device":
+                        childDevice.release()
                     break
                 }
 			break
@@ -683,7 +695,7 @@ Default: 0 (When system is turned off the output is 0V (NC))
 </Value>
 <Value type="list" byteSize="1" index="100" label="Enable / Disable Endpoint I2 or select Notification Type and Event" min="0" max="9" value="2" setting_type="zwave" fw="" hidden="true">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="0" />
@@ -693,11 +705,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Water Alarm; Water Leak detected" value="4" />
         <Item label="Heat Alarm; Overheat detected" value="5" />
         <Item label="Smoke Alarm; Smoke detected" value="6" />
+        <Item label="Momentary Button; Button pushed" value="7" />
         <Item label="Sensor Binary" value="9" />
 </Value>
 <Value type="list" byteSize="1" index="101" label="Enable / Disable Endpoint I3 or select Notification Type and Event" min="0" max="9" value="4" setting_type="zwave" fw="" hidden="true">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="0" />
@@ -707,11 +720,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Water Alarm; Water Leak detected" value="4" />
         <Item label="Heat Alarm; Overheat detected" value="5" />
         <Item label="Smoke Alarm; Smoke detected" value="6" />
+        <Item label="Momentary Button; Button pushed" value="7" />
         <Item label="Sensor Binary" value="9" />
 </Value>
 <Value type="list" byteSize="1" index="i2" label="Enable / Disable Endpoint I2 or select Notification Type and Event" min="0" max="9" value="Contact Sensor Child Device" setting_type="preference" fw="">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="Disabled" />
@@ -720,11 +734,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Carbon Dioxide; Carbon Dioxide detected" value="Carbon Dioxide Detector Child Device" />
         <Item label="Water Alarm; Water Leak detected" value="Water Sensor Child Device" />
         <Item label="Smoke Alarm; Smoke detected" value="Smoke Detector Child Device" />
+        <Item label="Momentary Button; Button pushed" value="Momentary Button Child Device" />
         <Item label="Sensor Binary" value="Contact Sensor Child Device" />
 </Value>
 <Value type="list" byteSize="1" index="i3" label="Enable / Disable Endpoint I3 or select Notification Type and Event" min="0" max="9" value="Contact Sensor Child Device" setting_type="preference" fw="">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="Disabled" />
@@ -733,6 +748,7 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Carbon Dioxide; Carbon Dioxide detected" value="Carbon Dioxide Detector Child Device" />
         <Item label="Water Alarm; Water Leak detected" value="Water Sensor Child Device" />
         <Item label="Smoke Alarm; Smoke detected" value="Smoke Detector Child Device" />
+        <Item label="Momentary Button; Button pushed" value="Momentary Button Child Device" />
         <Item label="Sensor Binary" value="Contact Sensor Child Device" />
 </Value>
 <Value type="number" byteSize="2" index="110" label="Temperature sensor offset settings" min="-100" max="100" value="0" setting_type="zwave" fw="">
