@@ -59,7 +59,7 @@ def parse(String description) {
 	def result = []
     if (description != "updated") {
 	   logging("description: $description", 1)
-	   def cmd = zwave.parse(description, [0x20: 1, 0x70: 1])
+	   def cmd = zwave.parse(description, [0x20: 1, 0x70: 1, 0x71: 3])
 	   if (cmd) {
 		   result += zwaveEvent(cmd)
 	   }
@@ -282,41 +282,42 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def on() {
     logging("on()", 1)
-	commands([
-		zwave.basicV1.basicSet(value: 0xFF),
-		zwave.switchBinaryV1.switchBinaryGet()
-	])
+    delayBetween([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0xFF, dimmingDuration: 0x00).format(),
+		zwave.switchMultilevelV1.switchMultilevelGet().format()
+	], 1000)  
 }
 
 def off() {
     logging("off()", 1)
-	commands([
-		zwave.basicV1.basicSet(value: 0x00),
-		zwave.switchBinaryV1.switchBinaryGet()
-	])
+	delayBetween([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0x00, dimmingDuration: 0x00).format(),
+		zwave.switchMultilevelV1.switchMultilevelGet().format()
+	], 1000)
 }
 
-def setLevel(level) {
-    logging("setLevel($level)", 1)
+def setLevel(level, duration=null) {
+    logging("setLevel($level, $duration)", 1)
 	if(level > 99) level = 99
     if(level < 1) level = 1
-    commands([
-        zwave.basicV1.basicSet(value: level),
-    ])
+    int delay = duration ? BigDecimal.valueOf(duration).intValueExact() * 1000 : 1000
+	delayBetween([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration).format(),
+		zwave.switchMultilevelV1.switchMultilevelGet().format()
+	], delay)
 }
 
 def poll() {
     logging("poll()", 1)
-	command(zwave.switchBinaryV1.switchBinaryGet())
+	command(zwave.switchMultilevelV1.switchMultilevelGet().format())
 }
 
 def refresh() {
     logging("refresh()", 1)
     commands([
-		zwave.switchBinaryV1.switchBinaryGet(),
+		zwave.switchMultilevelV1.switchMultilevelGet().format(),
 		zwave.meterV2.meterGet(scale: 0),
 		zwave.meterV2.meterGet(scale: 2),
-        zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
 	])
 }
 
