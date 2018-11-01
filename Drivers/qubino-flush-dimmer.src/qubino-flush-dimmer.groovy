@@ -313,7 +313,7 @@ def setLevel(level, duration=null) {
     if(level < 1) level = 1
     int delay = duration ? BigDecimal.valueOf(duration).intValueExact() * 1000 : 1000
 	delayBetween([
-		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration).format(),
+		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration ?: 0).format(),
 		zwave.switchMultilevelV1.switchMultilevelGet().format()
 	], delay)
 }
