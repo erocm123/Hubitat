@@ -258,7 +258,8 @@ def parse(description) {
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
     
     def body = new String(descMap["body"].decodeBase64())
-    log.debug body
+    if(body.startsWith("{") || body.startsWith("[")) {
+
     
     def slurper = new JsonSlurper()
     def result = slurper.parseText(body)
@@ -345,6 +346,9 @@ def parse(description) {
             toggleTiles("switch$result.program")
             events << createEvent(name:"switch$result.program", value: "on")
         }
+    }
+    } else {
+        //log.debug "Response is not JSON: $body"
     }
     
     if (!device.currentValue("ip") || (device.currentValue("ip") != getDataValue("ip"))) events << createEvent(name: 'ip', value: getDataValue("ip"))
@@ -752,7 +756,9 @@ private String convertPortToHex(port) {
 def parseDescriptionAsMap(description) {
 	description.split(",").inject([:]) { map, param ->
 		def nameAndValue = param.split(":")
-		map += [(nameAndValue[0].trim()):nameAndValue[1].trim()]
+        
+        if (nameAndValue.length == 2) map += [(nameAndValue[0].trim()):nameAndValue[1].trim()]
+        else map += [(nameAndValue[0].trim()):""]
 	}
 }
 
