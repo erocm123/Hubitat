@@ -28,8 +28,8 @@ def installed() {
 }
 
 def push() {
-    sendEvent(name: "pushed", value: 1, isStateChange: true)
     state.pushed = true
+    sendEvent(name: "pushed", value: 1, isStateChange: true)
 }
 
 def release() {
