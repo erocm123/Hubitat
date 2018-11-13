@@ -394,26 +394,26 @@ def configureProgram(params){
    if (settings["importMe"] != "" && settings["importMe"] != null) {
       def t = settings["importMe"].split("_")
       def numberOfActions = 0
-      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_name", t[0].split(",")[0])
-      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_off", t[0].split(",")[1])
-      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_numberOfActions", t[0].split(",")[2])
-      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_repeat", t[0].split(",")[3])
+      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_name", [type: "text", value: t[0].split(",")[0]])
+      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_off", [type: "bool", value: t[0].split(",")[1]])
+      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_numberOfActions", [type: "enum", value: t[0].split(",")[2]])
+      app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_repeat", [type: "enum", value: t[0].split(",")[3]])
       t[1].split(";").each() {
          numberOfActions++
-         app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_color", it.split("\\.")[0])
+         app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_color", [type: "enum", value: it.split("\\.")[0]])
          if (it.split("\\.")[0] != "Custom") {
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_lightLevel", it.split("\\.")[1])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_lightLevel", [type: "number", value: it.split("\\.")[1]])
          } else {
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_custom", it.split("\\.")[1])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_custom", [type: "text", value: it.split("\\.")[1]])
          }
-         app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_transition", it.split("\\.")[2])
+         app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_transition", [type: "enum", value: it.split("\\.")[2]])
          if (it.split("\\.")[3].indexOf("-") < 0) {
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_random_duration", false)
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_duration", it.split("\\.")[3])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_random_duration", [type: "bool", value: false])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_duration", [type: "number", value: it.split("\\.")[3]])
          } else {
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_random_duration", true)
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_min_duration", it.split("\\.")[3].split("-")[0])
-            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_max_duration", it.split("\\.")[3].split("-")[1])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_random_duration", [type: "bool", value: true])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_min_duration", [type: "number", value: it.split("\\.")[3].split("-")[0]])
+            app.updateSetting("${state.currentDeviceId}_programs_${state.currentProgram}_${numberOfActions}_max_duration", [type: "number", value: it.split("\\.")[3].split("-")[1]])
          }
       }
    app.updateSetting("importMe", "")
@@ -491,7 +491,7 @@ def exportProgram(){
             }
             programString = programString.substring(0, programString.length() - 1)
             
-            app.updateSetting("exportMe", programString)
+            app.updateSetting("exportMe", [type: "text", value: programString])
             input "exportMe", "text", title:"Program String", required: false
 		}
     }
@@ -560,8 +560,9 @@ def initialize() {
     if(isConfigured()){
     getChildDevices().each {
         if(it.typeName == "SmartLife RGBW Virtual Switch"){
-            subscribeToCommand(it, "on", virtualHandler)
-            subscribeToCommand(it, "off", virtualHandler)
+            //subscribeToCommand(it, "on", virtualHandler)
+            //subscribeToCommand(it, "off", virtualHandler)
+            subscribe(it, "switch", virtualHandler)
         }else{
         for (int i = 1; i <= 6; i++){
             subscribe(it, "switch${i}", physicalHandler)
@@ -609,10 +610,13 @@ def ssdpHandler(evt) {
             childIP = child.getDeviceDataByName("ip")
             childPort = child.getDeviceDataByName("port").toString()
             log.debug "Device data: ($childIP:$childPort) - reporting data: (${convertHexToIP(parsedEvent.networkAddress)}:${convertHexToInt(parsedEvent.deviceAddress)})."
-            if(childIP != convertHexToIP(parsedEvent.networkAddress) || childPort != convertHexToInt(parsedEvent.deviceAddress).toString()){
-            //if(child.getDeviceDataByName("ip") != convertHexToIP(parsedEvent.networkAddress) || child.getDeviceDataByName("port") != convertHexToInt(parsedEvent.deviceAddress)){
-               log.debug "Device data (${child.getDeviceDataByName("ip")}) does not match what it is reporting(${convertHexToIP(parsedEvent.networkAddress)}). Attempting to update."
-               child.sync(convertHexToIP(parsedEvent.networkAddress), convertHexToInt(parsedEvent.deviceAddress).toString())
+            if("${convertHexToIP(parsedEvent.networkAddress)}" != "0.0.0.0"){
+               if(childIP != convertHexToIP(parsedEvent.networkAddress) || childPort != convertHexToInt(parsedEvent.deviceAddress).toString()){
+                  log.debug "Device data (${child.getDeviceDataByName("ip")}) does not match what it is reporting(${convertHexToIP(parsedEvent.networkAddress)}). Attempting to update."
+                  child.sync(convertHexToIP(parsedEvent.networkAddress), convertHexToInt(parsedEvent.deviceAddress).toString())
+               }
+            } else {
+               log.debug "Device is reporting ip address of ${convertHexToIP(parsedEvent.networkAddress)}. Not updating." 
             }
         }
 
@@ -777,7 +781,7 @@ def configurePrograms(){
 def virtualHandler(evt) {
   log.debug "virtualHandler called with event: deviceId ${evt.deviceId} name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.getIsStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
   getChildDevices().each {
-        if (evt.deviceId == it.id){
+        if ("${evt.deviceId}" == "${it.id}"){
         if (evt.value == "off" && settings["${it.deviceNetworkId.split("/")[0]}_programs_${it.deviceNetworkId.split("/")[2]}_off"]?.toBoolean()){
             getChildDevice(it.deviceNetworkId.split("/")[0])."${evt.value}${it.deviceNetworkId.split("/")[2]}"(-1)
         } else {
