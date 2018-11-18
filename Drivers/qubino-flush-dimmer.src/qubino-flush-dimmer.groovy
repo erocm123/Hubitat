@@ -293,17 +293,17 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def on() {
     logging("on()", 1)
-    delayBetween([
-		zwave.switchMultilevelV3.switchMultilevelSet(value: 0xFF, dimmingDuration: 0x00).format(),
-		zwave.switchMultilevelV1.switchMultilevelGet().format()
+    commands([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0xFF, dimmingDuration: 0x00),
+		zwave.switchMultilevelV1.switchMultilevelGet()
 	], 1000)  
 }
 
 def off() {
     logging("off()", 1)
-	delayBetween([
-		zwave.switchMultilevelV3.switchMultilevelSet(value: 0x00, dimmingDuration: 0x00).format(),
-		zwave.switchMultilevelV1.switchMultilevelGet().format()
+	commands([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0x00, dimmingDuration: 0x00),
+		zwave.switchMultilevelV1.switchMultilevelGet()
 	], 1000)
 }
 
@@ -312,21 +312,21 @@ def setLevel(level, duration=null) {
 	if(level > 99) level = 99
     if(level < 1) level = 1
     int delay = duration ? BigDecimal.valueOf(duration).intValueExact() * 1000 : 1000
-	delayBetween([
-		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration ?: 0).format(),
-		zwave.switchMultilevelV1.switchMultilevelGet().format()
+	commands([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration ?: 0),
+		zwave.switchMultilevelV1.switchMultilevelGet()
 	], delay)
 }
 
 def poll() {
     logging("poll()", 1)
-	command(zwave.switchMultilevelV1.switchMultilevelGet().format())
+	command(zwave.switchMultilevelV1.switchMultilevelGet())
 }
 
 def refresh() {
     logging("refresh()", 1)
     commands([
-		zwave.switchMultilevelV1.switchMultilevelGet().format(),
+		zwave.switchMultilevelV1.switchMultilevelGet(),
 		zwave.meterV2.meterGet(scale: 0),
 		zwave.meterV2.meterGet(scale: 2),
 	])
