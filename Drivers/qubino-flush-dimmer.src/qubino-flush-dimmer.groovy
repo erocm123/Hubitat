@@ -43,59 +43,10 @@ metadata {
         
 	}
 
-	simulator {
-	}
-    
     preferences {
         input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
 		generate_preferences(configuration_model())  
     }
-
-	tiles{
-        multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
-			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-			   attributeState "off", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
-			   attributeState "on", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-			   attributeState "turningOff", label:'${name}', action:"switch.on", icon:"st.switches.switch.off", backgroundColor:"#ffffff", nextState:"turningOn"
-			   attributeState "turningOn", label:'${name}', action:"switch.off", icon:"st.switches.switch.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-			}
-            tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-				attributeState "level", action:"switch level.setLevel"
-			}
-            tileAttribute ("statusText", key: "SECONDARY_CONTROL") {
-           		attributeState "statusText", label:'${currentValue}'       		
-            }
-	    }
-        valueTile("power", "device.power", decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue} W'
-		}
-		standardTile("energy", "device.energy", decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue} kWh'
-		}
-        valueTile("temperature", "device.temperature", inactiveLabel: false, width: 2, height: 2) {
-            state "temperature", label:'${currentValue}°',
-            backgroundColors:
-             [
-                [value: 31, color: "#153591"],
-                [value: 44, color: "#1e9cbb"],
-                [value: 59, color: "#90d2a7"],
-				[value: 74, color: "#44b621"],
-				[value: 84, color: "#f1d801"],
-				[value: 95, color: "#d04e00"],
-				[value: 96, color: "#bc2323"]
-			]
-        }
-		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
-		}
-        standardTile("reset", "device.energy", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-		    state "default", label:'reset kWh', action:"reset"
-	    }
-        standardTile("configure", "device.needUpdate", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-            state "NO" , label:'', action:"configuration.configure", icon:"st.secondary.configure"
-            state "YES", label:'', action:"configuration.configure", icon:"https://github.com/erocm123/SmartThingsPublic/raw/master/devicetypes/erocm123/qubino-flush-1d-relay.src/configure@2x.png"
-        }
-	}
 }
 
 def installed() {
@@ -108,7 +59,7 @@ def parse(String description) {
 	def result = []
     if (description != "updated") {
 	   logging("description: $description", 1)
-	   def cmd = zwave.parse(description, [0x20: 1, 0x70: 1])
+	   def cmd = zwave.parse(description, [0x20: 1, 0x70: 1, 0x71: 3])
 	   if (cmd) {
 		   result += zwaveEvent(cmd)
 	   }
@@ -212,9 +163,8 @@ def zwaveEvent(hubitat.zwave.commands.sensorbinaryv2.SensorBinaryReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
     logging("NotificationReport: $cmd", 2)
     def result
-	
-	
-	if (cmd.notificationType == 2) {
+
+    if (cmd.notificationType == 2) {
     def children = childDevices
 	def childDevice = children.find{it.deviceNetworkId.endsWith("-i2")}
 		switch (cmd.event) {
@@ -239,6 +189,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "open")
                     break
+                    case "Momentary Button Child Device":
+                        childDevice.push()
+                    break
                 }
 			break
 			case 2:
@@ -261,6 +214,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     break
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "closed")
+                    break
+                    case "Momentary Button Child Device":
+                        childDevice.release()
                     break
                 }
 			break
@@ -291,6 +247,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "open")
                     break
+                    case "Momentary Button Child Device":
+                        childDevice.push()
+                    break
                 }
 			break
 			case 2:
@@ -314,6 +273,9 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                     case "Contact Sensor Child Device":
                         childDevice.sendEvent(name: "contact", value: "closed")
                     break
+                    case "Momentary Button Child Device":
+                        childDevice.release()
+                    break
                 }
 			break
 		}
@@ -331,41 +293,42 @@ def zwaveEvent(hubitat.zwave.Command cmd) {
 
 def on() {
     logging("on()", 1)
-	commands([
-		zwave.basicV1.basicSet(value: 0xFF),
-		zwave.switchBinaryV1.switchBinaryGet()
-	])
+    commands([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0xFF, dimmingDuration: 0x00),
+		zwave.switchMultilevelV1.switchMultilevelGet()
+	], 1000)  
 }
 
 def off() {
     logging("off()", 1)
 	commands([
-		zwave.basicV1.basicSet(value: 0x00),
-		zwave.switchBinaryV1.switchBinaryGet()
-	])
+		zwave.switchMultilevelV3.switchMultilevelSet(value: 0x00, dimmingDuration: 0x00),
+		zwave.switchMultilevelV1.switchMultilevelGet()
+	], 1000)
 }
 
-def setLevel(level) {
-    logging("setLevel($level)", 1)
+def setLevel(level, duration=null) {
+    logging("setLevel($level, $duration)", 1)
 	if(level > 99) level = 99
     if(level < 1) level = 1
-    commands([
-        zwave.basicV1.basicSet(value: level),
-    ])
+    int delay = duration ? BigDecimal.valueOf(duration).intValueExact() * 1000 : 1000
+	commands([
+		zwave.switchMultilevelV3.switchMultilevelSet(value: level, dimmingDuration: duration ?: 0),
+		zwave.switchMultilevelV1.switchMultilevelGet()
+	], delay)
 }
 
 def poll() {
     logging("poll()", 1)
-	command(zwave.switchBinaryV1.switchBinaryGet())
+	command(zwave.switchMultilevelV1.switchMultilevelGet())
 }
 
 def refresh() {
     logging("refresh()", 1)
     commands([
-		zwave.switchBinaryV1.switchBinaryGet(),
+		zwave.switchMultilevelV1.switchMultilevelGet(),
 		zwave.meterV2.meterGet(scale: 0),
 		zwave.meterV2.meterGet(scale: 2),
-        zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
 	])
 }
 
@@ -404,19 +367,19 @@ def updated()
 	}
     if (childDevices) {
         def childDevice = childDevices.find{it.deviceNetworkId.endsWith("-i2")}
-        if (childDevice && settings."i2" && settings."i2" != "Disabled"  && childDevice.typeName != settings."i2") {
-            childDevice.setDeviceType(settings."i2")
+        if (childDevice && settings."i2" && childDevice.typeName != settings."i2") {
+            changeChildDeviceType(childDevice, settings."i2", 2)
         }
         childDevice = childDevices.find{it.deviceNetworkId.endsWith("-i3")}
-        if (childDevice && settings."i3" && settings."i3" != "Disabled" && childDevice.typeName != settings."i3") {   
-            childDevice.setDeviceType(settings."i3")
+        if (childDevice && settings."i3" && childDevice.typeName != settings."i3") {   
+            changeChildDeviceType(childDevice, settings."i3", 3)
         }
     }
     def cmds = [] 
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    if (cmds != []) response(commands(cmds))
+    if (cmds != []) commands(cmds)
 }
 
 def generate_preferences(configuration_model)
@@ -647,6 +610,21 @@ private void createChildDevices() {
     }
 }
 
+private void changeChildDeviceType(childDevice, deviceType, i) {
+
+    log.debug "Changing ${childDevice} to ${deviceType}"
+    deleteChildDevice(childDevice.deviceNetworkId)
+    if (deviceType != "Disabled") {
+        try {
+            addChildDevice("erocm123", deviceType, "${childDevice.deviceNetworkId}", 
+                [completedSetup: true, label: "${childDevice.displayName}",
+                isComponent: true, componentName: "i$i", componentLabel: "Input $i"])
+        } catch (e) {
+            runIn(2, "sendAlert")
+        }
+    }
+}
+
 private sendAlert() {
    sendEvent(
       descriptionText: "Child device creation failed. Please make sure that the \"Contact Sensor Child Device\" is installed and published.",
@@ -796,7 +774,7 @@ Default: 0 (Dimming duration according to parameter 66)
 </Value>
 <Value type="list" byteSize="1" index="100" label="Enable / Disable Endpoint I2 or select Notification Type and Event" min="0" max="9" value="2" setting_type="zwave" fw="" hidden="true">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="0" />
@@ -806,11 +784,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Water Alarm; Water Leak detected" value="4" />
         <Item label="Heat Alarm; Overheat detected" value="5" />
         <Item label="Smoke Alarm; Smoke detected" value="6" />
+        <Item label="Momentary Button; Button pushed" value="7" />
         <Item label="Sensor Binary" value="9" />
 </Value>
 <Value type="list" byteSize="1" index="101" label="Enable / Disable Endpoint I3 or select Notification Type and Event" min="0" max="9" value="4" setting_type="zwave" fw="" hidden="true">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="0" />
@@ -820,11 +799,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Water Alarm; Water Leak detected" value="4" />
         <Item label="Heat Alarm; Overheat detected" value="5" />
         <Item label="Smoke Alarm; Smoke detected" value="6" />
+        <Item label="Momentary Button; Button pushed" value="7" />
         <Item label="Sensor Binary" value="9" />
 </Value>
 <Value type="list" byteSize="1" index="i2" label="Enable / Disable Endpoint I2 or select Notification Type and Event" min="0" max="9" value="Contact Sensor Child Device" setting_type="preference" fw="">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="Disabled" />
@@ -833,11 +813,12 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Carbon Dioxide; Carbon Dioxide detected" value="Carbon Dioxide Detector Child Device" />
         <Item label="Water Alarm; Water Leak detected" value="Water Sensor Child Device" />
         <Item label="Smoke Alarm; Smoke detected" value="Smoke Detector Child Device" />
+        <Item label="Momentary Button; Button pushed" value="Momentary Button Child Device" />
         <Item label="Sensor Binary" value="Contact Sensor Child Device" />
 </Value>
 <Value type="list" byteSize="1" index="i3" label="Enable / Disable Endpoint I3 or select Notification Type and Event" min="0" max="9" value="Contact Sensor Child Device" setting_type="preference" fw="">
  <Help>
-Range: 0 to 6, 9
+Range: 0 to 7, 9
 Default: Home Security; Motion Detection, unknown location
 </Help>
         <Item label="Disabled" value="Disabled" />
@@ -846,6 +827,7 @@ Default: Home Security; Motion Detection, unknown location
         <Item label="Carbon Dioxide; Carbon Dioxide detected" value="Carbon Dioxide Detector Child Device" />
         <Item label="Water Alarm; Water Leak detected" value="Water Sensor Child Device" />
         <Item label="Smoke Alarm; Smoke detected" value="Smoke Detector Child Device" />
+        <Item label="Momentary Button; Button pushed" value="Momentary Button Child Device" />
         <Item label="Sensor Binary" value="Contact Sensor Child Device" />
 </Value>
 <Value type="number" byteSize="2" index="110" label="Temperature sensor offset settings" min="-100" max="100" value="0" setting_type="zwave" fw="">
