@@ -129,14 +129,14 @@ def configurePDevice(params){
         section {
             href "configureProgramMain", title:"Configure Programs", description:"Configure Programs"
 		}
-        section("Virtual Switches"){
-           input "${state.currentDeviceId}_prefix", "text", title: "Virtual Switch Prefix", description: "Prefix for virtual switch names", required: false, defaultValue: "RGBW"
-           if(!isVirtualConfigured(state.currentDeviceId)){
-              href "createVirtual", title:"Create Virtual Devices", description:"Create virtual devices"
-           }else{
-              href "removeVirtual", title:"Remove Virtual Devices", description:"Remove virtual devices"
-           }
-        }
+        //section("Virtual Switches"){
+        //   input "${state.currentDeviceId}_prefix", "text", title: "Virtual Switch Prefix", description: "Prefix for virtual switch names", required: false, defaultValue: "RGBW"
+        //   if(!isVirtualConfigured(state.currentDeviceId)){
+        //      href "createVirtual", title:"Create Virtual Devices", description:"Create virtual devices"
+        //   }else{
+        //      href "removeVirtual", title:"Remove Virtual Devices", description:"Remove virtual devices"
+        //   }
+        //}
         section {
               href "deletePDevice", title:"Delete $state.currentDisplayName", description: ""
         }
@@ -195,6 +195,7 @@ def discoveryPage(){
 
 def deviceDiscovery(params=[:])
 {
+	log.debug "Discovery Started"
 	def devices = devicesDiscovered()
     
 	int deviceRefreshCount = !state.deviceRefreshCount ? 0 : state.deviceRefreshCount as int
@@ -557,20 +558,6 @@ def updated() {
 }
 
 def initialize() {
-    if(isConfigured()){
-    getChildDevices().each {
-        if(it.typeName == "SmartLife RGBW Virtual Switch"){
-            //subscribeToCommand(it, "on", virtualHandler)
-            //subscribeToCommand(it, "off", virtualHandler)
-            subscribe(it, "switch", virtualHandler)
-        }else{
-        for (int i = 1; i <= 6; i++){
-            subscribe(it, "switch${i}", physicalHandler)
-        }}
-        
-        }
-    }
-    
     configurePrograms()
     renameSwitches()
     ssdpSubscribe()
@@ -776,36 +763,6 @@ def configurePrograms(){
       } 
    }}
    }  
-}
-
-def virtualHandler(evt) {
-  log.debug "virtualHandler called with event: deviceId ${evt.deviceId} name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.getIsStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
-  getChildDevices().each {
-        if ("${evt.deviceId}" == "${it.id}"){
-        if (evt.value == "off" && settings["${it.deviceNetworkId.split("/")[0]}_programs_${it.deviceNetworkId.split("/")[2]}_off"]?.toBoolean()){
-            getChildDevice(it.deviceNetworkId.split("/")[0])."${evt.value}${it.deviceNetworkId.split("/")[2]}"(-1)
-        } else {
-            getChildDevice(it.deviceNetworkId.split("/")[0])."${evt.value}${it.deviceNetworkId.split("/")[2]}"()
-        }
-     }   
-  }
-}
-
-def physicalHandler(evt) {
-  log.debug "physicalHandler called with event:  name:${evt.name} source:${evt.source} value:${evt.value} isStateChange: ${evt.getIsStateChange()} isPhysical: ${evt.isPhysical()} isDigital: ${evt.isDigital()} data: ${evt.data} device: ${evt.device}"
-  for (int i = 1; i <= 6; i++){
-       if (evt.name == "switch${i}") {
-                getChildDevices().each {
-                if (evt.deviceId == it.id) {
-                    if(getChildDevice("${it.deviceNetworkId}/${app.id}/${i}")){
-                        sendEvent(getChildDevice("${it.deviceNetworkId}/${app.id}/${i}"), [name:"switch", value:"$evt.value", type:"physical"])
-                    }
-                }
-                 
-			}
-       }
-    
-}
 }
 
 def huesatToRGB(float hue, float sat) {
