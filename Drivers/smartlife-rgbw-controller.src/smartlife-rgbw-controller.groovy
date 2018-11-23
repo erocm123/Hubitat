@@ -29,12 +29,6 @@ metadata {
         capability "Configuration"
         capability "Health Check"
         
-        (1..6).each { n ->
-			attribute "switch$n", "enum", ["on", "off"]
-			command "on$n"
-			command "off$n"
-		}
-        
         command "reset"
         command "setProgram"
         command "setWhiteLevel"
@@ -149,13 +143,6 @@ metadata {
     		state "firmware", label:'Firmware ${currentValue}'
 		}
         
-        
-        (1..6).each { n ->
-			standardTile("switch$n", "switch$n", canChangeIcon: true, width: 2, height: 2, decoration: "flat") {
-				state "off", label: "Program\n$n", action: "on$n", icon: "st.switches.switch.off", backgroundColor: "#cccccc"
-                state "on", label: "Program\n$n", action: "off$n", icon: "st.switches.switch.on", backgroundColor: "#00a0dc"
-			}
-		}
     }
 
 	main(["switch"])
@@ -170,8 +157,23 @@ metadata {
              "refresh", "configure", "ip", "firmware" ])
 }
 
+private childCheck(){
+if (!childDevices) {
+        createChildDevices()
+    } else if (device.label != state.oldLabel) {
+        childDevices.each {
+            if (it.label == "${state.oldLabel} (CH${channelNumber(it.deviceNetworkId)})") {
+                def newLabel = "${device.displayName} (CH${channelNumber(it.deviceNetworkId)})"
+                it.setLabel(newLabel)
+            }
+        }
+        state.oldLabel = device.label
+    }
+}
+
 def installed() {
 	log.debug "installed()"
+	childCheck()
 	configure()
 }
 
@@ -185,11 +187,21 @@ def configure() {
 def updated()
 {
     logging("updated()", 1)
+	childCheck()
     def cmds = [] 
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 12 * 60 * 2, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID], displayed: false)
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     if (cmds != []) response(cmds)
+}
+
+private void createChildDevices() {
+    state.oldLabel = device.label
+    for (i in 1..6) {
+        addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", [completedSetup: true, label: "Program ${i}",
+            isComponent: false, componentName: "ep$i", componentLabel: "Program $i"
+        ])
+    }
 }
 
 private def logging(message, level) {
@@ -258,8 +270,7 @@ def parse(description) {
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
     
     def body = new String(descMap["body"].decodeBase64())
-    if(body.startsWith("{") || body.startsWith("[")) {
-
+    log.debug body
     
     def slurper = new JsonSlurper()
     def result = slurper.parseText(body)
@@ -339,16 +350,13 @@ def parse(description) {
        if (result.success == "true") state.configSuccess = "true" else state.configSuccess = "false" 
     }
     if (result.containsKey("program")) {
-        if (result.running == "false") {
-            toggleTiles("all")
+		def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep$result.program"}
+            if (childDevice) {         
+                childDevice.sendEvent(name: "switch", value: result.running == "true"? "on" : "off")
         }
-        else {
-            toggleTiles("switch$result.program")
-            events << createEvent(name:"switch$result.program", value: "on")
-        }
-    }
-    } else {
-        //log.debug "Response is not JSON: $body"
+		
+		toggleTiles(result.program)
+        
     }
     
     if (!device.currentValue("ip") || (device.currentValue("ip") != getDataValue("ip"))) events << createEvent(name: 'ip', value: getDataValue("ip"))
@@ -357,9 +365,13 @@ def parse(description) {
 }
 
 private toggleTiles(value) {
-   def tiles = ["switch1", "switch2", "switch3", "switch4", "switch5", "switch6"]
-   tiles.each {tile ->
-      if (tile != value) sendEvent(name: tile, value: "off")
+   for (int i = 1; i <= 6; i++){
+	   if ("${i}" != value){
+           def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep$i"}
+           if (childDevice) {         
+                childDevice.sendEvent(name: "switch", value: "off")
+           }
+	   }
    }
 }
 
@@ -675,7 +687,7 @@ def sync(ip, port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+	def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
@@ -756,9 +768,7 @@ private String convertPortToHex(port) {
 def parseDescriptionAsMap(description) {
 	description.split(",").inject([:]) { map, param ->
 		def nameAndValue = param.split(":")
-        
-        if (nameAndValue.length == 2) map += [(nameAndValue[0].trim()):nameAndValue[1].trim()]
-        else map += [(nameAndValue[0].trim()):""]
+		map += [(nameAndValue[0].trim()):nameAndValue[1].trim()]
 	}
 }
 
@@ -785,33 +795,55 @@ def toAscii(s){
                 return asciiInt;
 }
 
-def on1() { onOffCmd(1, 1) }
-def on2() { onOffCmd(1, 2) }
-def on3() { onOffCmd(1, 3) }
-def on4() { onOffCmd(1, 4) }
-def on5() { onOffCmd(1, 5) }
-def on6() { onOffCmd(1, 6) }
 
-def off1(p=null) { onOffCmd((p == null ? 0 : p), 1) }
-def off2(p=null) { onOffCmd((p == null ? 0 : p), 2) }
-def off3(p=null) { onOffCmd((p == null ? 0 : p), 3) }
-def off4(p=null) { onOffCmd((p == null ? 0 : p), 4) }
-def off5(p=null) { onOffCmd((p == null ? 0 : p), 5) }
-def off6(p=null) { onOffCmd((p == null ? 0 : p), 6) }
+def childOn(String dni) {
+    log.debug "childOn($dni)"
+    def cmds = []
+    if(state."program${channelNumber(dni)}" != null) {
+		uri = "/program?value=${state."program${channelNumber(dni)}"}&number=${channelNumber(dni)}"
+	} else {
+		//default programs if user hasn't set them up
+		switch(channelNumber(dni)){
+		case "1":
+			uri = "/program?value=g~ff0000~100_g~0000ff~100&repeat=-1&off=true&number=${channelNumber(dni)}"
+			break;
+		case "2":
+			uri = "/program?value=f~ff0000~6000_f~0000ff~6000_f~00ff00~6000_f~ffff00~6000_f~5a00ff~6000_f~ff00ff~6000_f~00ffff~6000&repeat=-1&off=false&number=${channelNumber(dni)}"
+			break;
+		case "3":
+			uri = "/program?value=f~xxxxxx~100-3000&repeat=-1&off=false&number=${channelNumber(dni)}"
+			break;
+		case "4":
+			uri = "/program?value=f~800000~100-3000_f~662400~100-2000_f~330000~100-3000_f~4d1b00~100-2000_f~990000~100-3000_f~1a0900~100-2000&repeat=-1&off=true&number=${channelNumber(dni)}"
+			break;
+		case "5":
+			uri = "/program?value=f~00004d~100-15000_x~b3~100_g~000000~100_x~cc~100&repeat=-1&off=true&number=${channelNumber(dni)}"
+			break;
+		case "6":
+			uri = "/program?value=f~xxxxxx~100-3000&repeat=-1&off=false&number=${channelNumber(dni)}"
+			break;
+		default:
+			uri = "/program?value=f~xxxxxx~100-3000&repeat=-1&off=false"
+			break;
+		}
+		
+	}
+	sendHubCommand(getAction(uri))
+}
 
-def onOffCmd(value, program) {
-    log.debug "onOffCmd($value, $program)"
-    def uri
-    if (value == 1){
-       if(state."program${program}" != null) {
-          uri = "/program?value=${state."program${program}"}&number=$program"
-       }    
-    } else if(value == 0){
-       uri = "/stop"
-    } else {
-       uri = "/off"
-    }
-    if (uri != null) return getAction(uri)
+def childOff(String dni) {
+    log.debug "childOff($dni)"
+    uri = "/stop"
+	sendHubCommand(getAction(uri))
+}
+
+def childRefresh(String dni) {
+    log.debug "childRefresh($dni)"
+    //Not needed right now
+}
+
+private channelNumber(String dni) {
+    dni.split("-ep")[-1] as Integer
 }
 
 def setProgram(value, program){
