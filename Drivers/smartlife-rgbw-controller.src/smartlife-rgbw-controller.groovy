@@ -44,11 +44,11 @@ metadata {
         command "white2On"
         command "white2Off"
         
- 		command "setRedLevel"
-        command "setGreenLevel"
-        command "setBlueLevel"
-        command "setWhite1Level"
-        command "setWhite2Level"
+ 		command "setRedLevel", ["number"]
+        command "setGreenLevel", ["number"]
+        command "setBlueLevel", ["number"]
+        command "setWhite1Level", ["number"]
+        command "setWhite2Level", ["number"]
 	}
 
 	simulator {
