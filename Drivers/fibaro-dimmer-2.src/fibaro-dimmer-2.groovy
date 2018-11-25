@@ -31,6 +31,7 @@ metadata {
         capability "Energy Meter"
         capability "Power Meter"
         capability "PushableButton"
+		capability "HoldableButton"
         capability "Health Check"
         
         attribute   "needUpdate", "string"
@@ -242,7 +243,7 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
 
 def buttonEvent(button, value) {
     logging("buttonEvent() Button:$button, Value:$value")
-	createEvent(name: "button", value: value, data: [buttonNumber: button], descriptionText: "$device.displayName button $button was $value", isStateChange: true)
+	createEvent(name: value, value: button, isStateChange:true)
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
