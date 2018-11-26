@@ -438,12 +438,13 @@ def setColor(value) {
     log.debug "setColor being called with ${value}"
     def uri
     def validValue = true
+	def hex
     
     if ((value.saturation != null) && (value.hue != null)) {
         def hue = (value.hue != null) ? value.hue : 13
 		def saturation = (value.saturation != null) ? value.saturation : 13
 		def rgb = huesatToRGB(hue as Integer, saturation as Integer)
-        value.hex = rgbToHex([r:rgb[0], g:rgb[1], b:rgb[2]])
+        hex = rgbToHex([r:rgb[0], g:rgb[1], b:rgb[2]])
     } 
     
     if (value.hue == 5 && value.saturation == 4) {
@@ -476,6 +477,20 @@ def setColor(value) {
        def whiteLevel = getWhite(value.level)
        uri = "/w1?value=${whiteLevel}"
        state.previousColor = "${whiteLevel}"
+    }
+	else if (hex) {
+       log.debug "setting color with hex"
+       if (!hex ==~ /^\#([A-Fa-f0-9]){6}$/) {
+           log.debug "$hex is not valid"
+           validValue = false
+       } else {
+           def rgb = hex.findAll(/[0-9a-fA-F]{2}/).collect { Integer.parseInt(it, 16) }
+           def myred = rgb[0] < 40 ? 0 : rgb[0]
+           def mygreen = rgb[1] < 40 ? 0 : rgb[1]
+           def myblue = rgb[2] < 40 ? 0 : rgb[2]
+           def dimmedColor = getDimmedColor(rgbToHex([r:myred, g:mygreen, b:myblue]))
+           uri = "/rgb?value=${dimmedColor}"
+       }
     }
 	else if (value.hex) {
        log.debug "setting color with hex"
