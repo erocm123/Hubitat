@@ -46,12 +46,12 @@
  *  - Only when mode is . . .
  *
  *
- *  2018-05-09 - Added the ability to disable "Device Delayed" notifications (use only ONLINE / OFFLINE status). Thanks ninjamonkey198206!
+ *  2018-05-09 - Added the ability to disable "Device Delayed" notifications (use only ACTIVE / INACTIVE status). Thanks ninjamonkey198206!
  *
  *  2017-06-08 - Added support for Ask Alexa Queue Support. Also added Ask Alexa options to automatically expire messages after x hours
  *               and overwrite messages that are sent as reminders (to prevent a backlog of reminder alerts).
- *  2017-03-08 - Added an option to use Offline / Online status when available. The new Health Check capability
- *               updates the offline / online status when communication is sent from the device. This eliminates
+ *  2017-03-08 - Added an option to use Inactive / Active status when available. The new Health Check capability
+ *               updates the Inactive / active status when communication is sent from the device. This eliminates
  *               the need to look at events (which may not update because of duplicate events anyway).
  *
  *  2016-08-21 - Lot's of changes. Layout has been reorganized to make navigation easier. Battery alerts available. You can
@@ -171,7 +171,7 @@ def pageSettings() {
                 input "phoneNumber", "phone", title: "Enter phone number to send text notification.", required: false
             input "sendPushMessage", "capability.notification", title: "Send a push notification?", multiple: true, required: false
             //}
-            input "deviceDelayed", "bool", title: "Disable \"Device Delayed\" notifications? (Only use OFFLINE / ONLINE status)", required: false, submitOnChange: false, value: false
+            input "deviceDelayed", "bool", title: "Disable \"Device Delayed\" notifications? (Only use INACTIVE / ACTIVE status)", required: false, submitOnChange: false, value: false
             input "deviceOnline", "bool", title: "Send a notification if a device comes back online?", required: false, submitOnChange: false, value: false
             input "askAlexa", "bool", title: "Send notifications to Ask Alexa?", required: false, submitOnChange: true, value: false
             if (askAlexa) {
@@ -186,7 +186,7 @@ def pageSettings() {
         }
         section([title: "Other Options", mobileOnly: true]) {
             //input "checkHub", "bool", title: "Send notification if hub goes offline?", required: false, submitOnChange: false, value: false
-            input "healthCheck", "bool", title: "Use Online / Offline status if available?", required: false, submitOnChange: false, value: false
+            input "healthCheck", "bool", title: "Use Active / Inactive status if available?", required: false, submitOnChange: false, value: false
             label title: "Assign a name for the app (optional)", required: false
         }    
     }
@@ -279,65 +279,65 @@ def pageStatus(params) {
     return dynamicPage(pageProperties) {
 
         if (params.reset) {
-            atomicState.batterygoodlist = ""
-            atomicState.batterybadlist = ""
-            atomicState.batterylist = ""
-            atomicState.goodlist = ""
-            atomicState.badlist = ""
-            atomicState.errorlist = ""
-            atomicState.delaylist = ""
-            atomicState.delayListCheck = ""
-            atomicState.batteryerrorlist = ""
-            atomicState.batteryerrorlistMap = []
-            atomicState.batterylistMap = []
-            atomicState.goodlistMap = []
-            atomicState.badlistMap = []
-            atomicState.errorlistMap = []
-            atomicState.delaylistMap = []
-            atomicState.delaylistCheckMap = []
+            state.batterygoodlist = ""
+            state.batterybadlist = ""
+            state.batterylist = ""
+            state.goodlist = ""
+            state.badlist = ""
+            state.errorlist = ""
+            state.delaylist = ""
+            state.delayListCheck = ""
+            state.batteryerrorlist = ""
+            state.batteryerrorlistMap = []
+            state.batterylistMap = []
+            state.goodlistMap = []
+            state.badlistMap = []
+            state.errorlistMap = []
+            state.delaylistMap = []
+            state.delaylistCheckMap = []
             
         }
         if (params.refresh) doCheck()
 
-        if (atomicState.delaylist) {
+        if (state.delaylist) {
             section("Devices that have not reported for $timer hour(s)") {
-                paragraph atomicState.delaylist.trim()
+                paragraph state.delaylist.trim()
             }
         }
 
-        if (atomicState.badlist) {
+        if (state.badlist) {
             section("Devices NOT Reporting Events") {
-                paragraph atomicState.badlist.trim()
+                paragraph state.badlist.trim()
             }
         }
 
-        if (atomicState.errorlist) {
+        if (state.errorlist) {
             section("Devices with Errors") {
-                paragraph atomicState.errorlist.trim()
+                paragraph state.errorlist.trim()
             }
         }
 
-        if (atomicState.goodlist) {
+        if (state.goodlist) {
             section("Devices Reporting (hrs old)") {
-                paragraph atomicState.goodlist.trim()
+                paragraph state.goodlist.trim()
             }
         }
         
-        if (atomicState.batterybadlist) {
+        if (state.batterybadlist) {
             section("Devices With Low Battery") {
-                paragraph atomicState.batterybadlist.trim()
+                paragraph state.batterybadlist.trim()
             }
         }
         
-        if (atomicState.batteryerrorlist) {
+        if (state.batteryerrorlist) {
             section("Devices Not Reporting Battery") {
-                paragraph atomicState.batteryerrorlist.trim()
+                paragraph state.batteryerrorlist.trim()
             }
         }
         
-        if (atomicState.batterygoodlist) {
+        if (state.batterygoodlist) {
             section("Device Battery Levels") {
-                paragraph atomicState.batterygoodlist.trim()
+                paragraph state.batterygoodlist.trim()
             }
         }
 
@@ -354,22 +354,22 @@ def eventCheck(evt = false) {
     if (allOk) {
         if ((settings.checkEvent != null && settings.checkEvent) || evt == false) {
             if (settings.minimumCheck == null || settings.minimumCheck == "") settings.minimumCheck = 15
-            if (atomicState.lastExe != null && now() - atomicState.lastExe > settings.minimumCheck * 60 * 1000) {
-                atomicState.lastExe = now()
+            if (state.lastExe != null && now() - state.lastExe > settings.minimumCheck * 60 * 1000) {
+                state.lastExe = now()
                 doCheck()
             } else {
                 log.debug "Minimum time of $settings.minimumCheck minutes has not elapsed."
-                if (atomicState.lastExe == null) atomicState.lastExe = now()
+                if (state.lastExe == null) state.lastExe = now()
             }
         } else {
-            log.debug "Event Check Disabled."
+            //log.debug "Event Check Disabled."
         }
     }
 }
 
 def doCheck() {
-    if (atomicState.isRunning != null && atomicState.isRunning != 1) {
-        atomicState.isRunning = 1
+    if (state.isRunning != null && state.isRunning != 1) {
+        state.isRunning = 1
 
         log.debug "doCheck()"
         def rightNow = new Date()
@@ -449,9 +449,12 @@ def doCheck() {
             }
             if (dexclude == false){
                 def lastTime
-                if(it.status.toUpperCase() in ["ONLINE"] && healthCheck?.toBoolean() == true && it.getLastActivity() != null) {
-                    lastTime = it.getLastActivity()
-                } else if (it.status.toUpperCase() in ["OFFLINE"] && healthCheck?.toBoolean() == true){
+                if(it.status.toUpperCase() in ["ACTIVE"] && healthCheck?.toBoolean() == true && it.lastActivity != null) {
+                    lastTime = it.lastActivity
+					//log.debug it.lastActivity
+					//log.debug it.displayName
+					
+                } else if (it.status.toUpperCase() in ["INACTIVE"] && healthCheck?.toBoolean() == true){
                    lastTime = null
                 } else {
                     lastTime = it.events([all: true, max: 100]).find {
@@ -549,7 +552,7 @@ def doCheck() {
                 delaylist += "${it.time} - ${it.name}\n"
             }
             def tempMap = []
-            atomicState.delaylistCheckMap.each {
+            state.delaylistCheckMap.each {
                 tempMap += [
                     [name: "$it.name", id: "$it.id"]
                 ]
@@ -557,7 +560,7 @@ def doCheck() {
             def delaylistCheckMapDiff = delaylistCheckUniqueSorted - tempMap
             def onlinedelaylistMapDiff = tempMap - delaylistCheckUniqueSorted
             tempMap = []
-            atomicState.errorlistMap.each {
+            state.errorlistMap.each {
                 tempMap += [
                     [name: "$it.name", id: "$it.id"]
                 ]
@@ -565,7 +568,7 @@ def doCheck() {
             def errorlistMapDiff = errorlistUniqueSorted - tempMap
             def onlineerrorlistMapDiff = tempMap - errorlistUniqueSorted
             tempMap = []
-            atomicState.badlistMap.each {
+            state.badlistMap.each {
                 tempMap += [
                     [name: "$it.name", id: "$it.id"]
                 ]
@@ -573,14 +576,14 @@ def doCheck() {
             def badlistMapDiff = badlistUniqueSorted - tempMap
             def onlinebadlistMapDiff = tempMap - badlistUniqueSorted
             tempMap = []
-            atomicState.batteryerrorlistMap.each {
+            state.batteryerrorlistMap.each {
                 tempMap += [
                     [name: "$it.name", id: "$it.id"]
                 ]
             }
             def batteryerrorlistMapDiff = batteryerrorlistUniqueSorted - tempMap
             tempMap = []
-            atomicState.batterylistMap.each {
+            state.batterylistMap.each {
                 tempMap += [
                     [name: "$it.name", id: "$it.id"]
                 ]
@@ -594,7 +597,7 @@ def doCheck() {
                     hublistMap += [name: "${location.hubs[0].name}", id: "${location.hubs[0].id}"]
                 }
                 tempMap = []
-                atomicState.hublistMap.each {
+                state.hublistMap.each {
                     tempMap += [
                         [name: "$it.name", id: "$it.id"]
                     ]
@@ -710,36 +713,36 @@ def doCheck() {
                 }
             }
 
-            atomicState.notifications = notifications
-            atomicState.batterygoodlist = batterygoodlist
-            atomicState.batterybadlist = batterybadlist
-            atomicState.batterybadlistMap = batterybadlistMap
-            atomicState.batterylist = batterylist
-            atomicState.batteryerrorlist = batteryerrorlist
-            atomicState.batteryerrorlistMap = batteryerrorlistMap
-            atomicState.goodlist = goodlist
-            atomicState.badlist = badlist
-            atomicState.errorlist = errorlist
-            atomicState.delaylist = delaylist
-            atomicState.delayListCheck = delayListCheck
-            atomicState.batterylistMap = batterylistMap
-            atomicState.goodlistMap = goodlistMap
-            atomicState.badlistMap = badlistMap
-            atomicState.errorlistMap = errorlistMap
-            atomicState.delaylistMap = delaylistMap
-            atomicState.delaylistCheckMap = delaylistCheckMap
-            atomicState.hublistMap = hublistMap
+            state.notifications = notifications
+            state.batterygoodlist = batterygoodlist
+            state.batterybadlist = batterybadlist
+            state.batterybadlistMap = batterybadlistMap
+            state.batterylist = batterylist
+            state.batteryerrorlist = batteryerrorlist
+            state.batteryerrorlistMap = batteryerrorlistMap
+            state.goodlist = goodlist
+            state.badlist = badlist
+            state.errorlist = errorlist
+            state.delaylist = delaylist
+            state.delayListCheck = delayListCheck
+            state.batterylistMap = batterylistMap
+            state.goodlistMap = goodlistMap
+            state.badlistMap = badlistMap
+            state.errorlistMap = errorlistMap
+            state.delaylistMap = delaylistMap
+            state.delaylistCheckMap = delaylistCheckMap
+            state.hublistMap = hublistMap
 
 
-            atomicState.isRunning = now()
+            state.isRunning = now()
         } else {
             log.debug "There are no devices selected"
-            atomicState.goodlist = "There are no devices selected"
+            state.goodlist = "There are no devices selected"
         }
     } else {
         log.debug "The application is already running"
-        if (atomicState.isRunning == null) atomicState.isRunning = now()
-        if ((now() - atomicState.isRunning) > 60000) atomicState.isRunning = now()
+        if (state.isRunning == null) state.isRunning = now()
+        if ((now() - state.isRunning) > 60000) state.isRunning = now()
     }
 
 }
@@ -854,7 +857,7 @@ def scheduleCheck() {
 def resend() {
     log.debug "Resending alerts"
     def delaylistMapDiff = []
-    atomicState.delaylistMap.each {
+    state.delaylistMap.each {
         def exclude = false
         resendExclusions.each { n ->
             if("$it.id" == "$n"){
@@ -868,7 +871,7 @@ def resend() {
         }
     }
     def errorlistMapDiff = []
-    atomicState.errorlistMap.each {
+    state.errorlistMap.each {
         def exclude = false
         resendExclusions.each { n ->
             if("$it.id" == "$n"){
@@ -882,7 +885,7 @@ def resend() {
         }
     }
     def badlistMapDiff = []
-    atomicState.badlistMap.each {
+    state.badlistMap.each {
         def exclude = false
         resendExclusions.each { n ->
             if("$it.id" == "$n"){
@@ -896,7 +899,7 @@ def resend() {
         }
     }
     def batteryerrorlistMapDiff = []
-    atomicState.batteryerrorlistMap.each {
+    state.batteryerrorlistMap.each {
         def exclude = false
         resendExclusions.each { n ->
             if("$it.id" == "$n"){
@@ -910,7 +913,7 @@ def resend() {
         }
     }
     def batterybadlistMapDiff = []
-    atomicState.batterybadlistMap.each {
+    state.batterybadlistMap.each {
         def exclude = false
         resendExclusions.each { n ->
             if("$it.id" == "$n"){
@@ -924,7 +927,7 @@ def resend() {
         }
     }
     def hublistMapDiff = []
-    atomicState.hublistMap.each {
+    state.hublistMap.each {
         hublistMapDiff += [
             [name: "$it.name", id: "$it.id"]
         ]
