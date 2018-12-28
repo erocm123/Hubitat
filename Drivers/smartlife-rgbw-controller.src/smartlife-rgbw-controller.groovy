@@ -13,7 +13,7 @@
  *  SmartLife RGBW Controller
  *
  *  Author: Eric Maycock (erocm123)
- *  Date: 2016-12-10
+ *  Date: 2018-12-27
  */
 
 import groovy.json.JsonSlurper
