@@ -1,5 +1,5 @@
 /**
- *  Copyright 2016 Eric Maycock
+ *  Copyright 2018 Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -44,7 +44,7 @@ metadata {
         command "white2On"
         command "white2Off"
         
-         command "setRedLevel", ["number"]
+        command "setRedLevel", ["number"]
         command "setGreenLevel", ["number"]
         command "setBlueLevel", ["number"]
         command "setWhite1Level", ["number"]
@@ -1043,7 +1043,7 @@ def childSetLevel(String dni, value) {
 
 def childOff(String dni) {
     log.debug "childOff($dni)"
-     if (channelNumber(dni) in ["1","2","3","4","5","6"]) {
+     if (channelNumber(dni) in [1,2,3,4,5,6]) {
          uri = "/stop"
          sendHubCommand(getAction(uri))
      } else {
