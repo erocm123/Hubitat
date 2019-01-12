@@ -101,9 +101,9 @@ def parse(String description) {
 		}
 	}
     
-    def statusTextmsg = ""
-    if (device.currentState('power') && device.currentState('energy')) statusTextmsg = "${device.currentState('power').value} W ${device.currentState('energy').value} kWh"
-    sendEvent(name:"statusText", value:statusTextmsg, displayed:false)
+    //def statusTextmsg = ""
+    //if (device.currentState('power') && device.currentState('energy')) statusTextmsg = "${device.currentState('power').value} W ${device.currentState('energy').value} kWh"
+    //sendEvent(name:"statusText", value:statusTextmsg, displayed:false)
     
 	return result
 }
@@ -243,7 +243,7 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
 
 def buttonEvent(button, value) {
     logging("buttonEvent() Button:$button, Value:$value")
-	createEvent(name: value, value: button, isStateChange:true)
+	sendEvent(name: value, value: button, isStateChange:true)
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
@@ -288,13 +288,12 @@ def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cm
 }
 
 def zwaveEvent(hubitat.zwave.commands.crc16encapv1.Crc16Encap cmd) {
-	def versions = [0x31: 5, 0x30: 1, 0x9C: 1, 0x70: 2, 0x85: 2]
-	def version = versions[cmd.commandClass as Integer]
-	def ccObj = version ? zwave.commandClass(cmd.commandClass, version) : zwave.commandClass(cmd.commandClass)
-	def encapsulatedCommand = ccObj?.command(cmd.command)?.parse(cmd.data)
-	if (encapsulatedCommand) {
-		zwaveEvent(encapsulatedCommand)
-	}
+   def encapsulatedCommand = zwave.getCommand(cmd.commandClass, cmd.command, cmd.data,1)
+   if (encapsulatedCommand) {
+       zwaveEvent(encapsulatedCommand)
+   } else {
+       log.warn "Unable to extract CRC16 command from ${cmd}"
+   }
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
@@ -305,18 +304,18 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
 	logging(cmd)
 	if (cmd.meterType == 1) {
 		if (cmd.scale == 0) {
-			return createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
 		} else if (cmd.scale == 1) {
-			return createEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kVAh")
+			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kVAh")
 		} else if (cmd.scale == 2) {
-			return createEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+			sendEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
 		} else {
-			return createEvent(name: "electric", value: cmd.scaledMeterValue, unit: ["pulses", "V", "A", "R/Z", ""][cmd.scale - 3])
+			sendEvent(name: "electric", value: cmd.scaledMeterValue, unit: ["pulses", "V", "A", "R/Z", ""][cmd.scale - 3])
 		}
 	}
 }
 
-def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport cmd){
+def zwaveEvent(hubitat.zwave.commands.sensormultilevelv1.SensorMultilevelReport cmd){
     logging("SensorMultilevelReport: $cmd")
 	def map = [:]
 	switch (cmd.sensorType) {
