@@ -375,7 +375,18 @@ def ping() {
     commands(cmds)
 }
 
+def setLevel(level, duration) {
+	logging("setLevel value:$level, duration:$duration")
+    def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
+	logging("dimmingDuration: $dimmingDuration")
+    commands([
+        zwave.switchMultilevelV2.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: dimmingDuration),
+        zwave.switchMultilevelV1.switchMultilevelGet()
+    ])
+}
+
 def setLevel(level) {
+	logging("setLevel value:$level")
 	if(level > 99) level = 99
     if(level < 1) level = 1
     def cmds = []
@@ -443,7 +454,7 @@ def generate_preferences(configuration_model)
                     displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title:"${it.@label}\n" + "${it.Help}",
                     defaultValue: "${it.@value}",
                     displayDuringSetup: "${it.@displayDuringSetup}"
@@ -644,7 +655,7 @@ def convertParam(number, value) {
 }
 
 private def logging(message) {
-    if (state.enableDebugging == null || state.enableDebugging == "true") log.debug "$message"
+    if (state.enableDebugging == null || state.enableDebugging == true) log.debug "$message"
 }
 
 
