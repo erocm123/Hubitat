@@ -580,7 +580,7 @@ def generate_preferences(configuration_model)
                     defaultValue: "${it.@value}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title:"${it.@label}\n" + "${it.Help}",
                     //range: "${it.@min}..${it.@max}",
                     defaultValue: "${it.@value}"

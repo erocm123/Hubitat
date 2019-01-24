@@ -386,7 +386,7 @@ def generate_preferences(configuration_model)
                     displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title:"${it.@label}\n" + "${it.Help}",
                     defaultValue: "${it.@value}",
                     displayDuringSetup: "${it.@displayDuringSetup}"

@@ -679,7 +679,7 @@ def fanCirculate() {
 }
 
 private def logging(message) {
-    if (state.enableDebugging == null || state.enableDebugging == "true") log.debug "$message"
+    if (state.enableDebugging == null || state.enableDebugging == true) log.debug "$message"
 }
 
 def updated()
@@ -878,7 +878,7 @@ def generate_preferences(configuration_model)
                     displayDuringSetup: "${it.@displayDuringSetup}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title: it.@label != "" ? "${it.@label}\n" + "${it.Help}" : "" + "${it.Help}",
                     defaultValue: "${it.@value}",
                     displayDuringSetup: "${it.@displayDuringSetup}"

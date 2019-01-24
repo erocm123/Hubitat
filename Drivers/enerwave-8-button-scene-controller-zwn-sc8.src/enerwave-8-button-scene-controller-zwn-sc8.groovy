@@ -209,5 +209,5 @@ def refresh() {
 }
 
 private def logging(message) {
-    if (state.enableDebugging == "true") log.debug message
+    if (state.enableDebugging == true) log.debug message
 }

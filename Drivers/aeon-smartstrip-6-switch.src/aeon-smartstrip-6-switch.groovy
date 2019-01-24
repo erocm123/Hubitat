@@ -418,5 +418,5 @@ def convertTemp(value) {
 }
 
 private def logging(message) {
-    if (state.enableDebugging == "true") log.debug message
+    if (state.enableDebugging == true) log.debug message
 }

@@ -400,7 +400,7 @@ private getHeader(){
 }
 
 private def logging(message) {
-    if (state.enableDebugging == "true") log.debug message
+    if (state.enableDebugging == true) log.debug message
 }
 
 def playTrack(number) {

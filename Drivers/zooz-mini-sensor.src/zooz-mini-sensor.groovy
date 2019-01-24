@@ -460,7 +460,7 @@ def generate_preferences(configuration_model)
                     defaultValue: "${it.@value}"
             break
             case "boolean":
-               input "${it.@index}", "boolean",
+               input "${it.@index}", "bool",
                     title:"${it.@label}\n" + "${it.Help}",
                     //range: "${it.@min}..${it.@max}",
                     defaultValue: "${it.@value}"
@@ -525,7 +525,7 @@ private updateStatus(){
 }
 
 private def logging(message) {
-    if (state.enableDebugging == null || state.enableDebugging == "true") log.debug "$message"
+    if (state.enableDebugging == null || state.enableDebugging == true) log.debug "$message"
 }
 
 def configuration_model()
