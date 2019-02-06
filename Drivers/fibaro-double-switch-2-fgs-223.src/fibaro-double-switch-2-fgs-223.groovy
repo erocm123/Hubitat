@@ -329,7 +329,7 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
 
 def buttonEvent(button, value) {
     logging("buttonEvent() Button:$button, Value:$value")
-	createEvent(name: "button", value: value, data: [buttonNumber: button], descriptionText: "$device.displayName button $button was $value", isStateChange: true)
+	sendEvent(name: value, value: button, isStateChange:true)
 }
 
 /**
@@ -637,13 +637,12 @@ private commands(commands, delay=1000) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.crc16encapv1.Crc16Encap cmd) {
-	def versions = [0x31: 5, 0x30: 1, 0x9C: 1, 0x70: 2, 0x85: 2]
-	def version = versions[cmd.commandClass as Integer]
-	def ccObj = version ? zwave.commandClass(cmd.commandClass, version) : zwave.commandClass(cmd.commandClass)
-	def encapsulatedCommand = ccObj?.command(cmd.command)?.parse(cmd.data)
-	if (encapsulatedCommand) {
-		zwaveEvent(encapsulatedCommand)
-	}
+   def encapsulatedCommand = zwave.getCommand(cmd.commandClass, cmd.command, cmd.data,1)
+   if (encapsulatedCommand) {
+       zwaveEvent(encapsulatedCommand)
+   } else {
+       log.warn "Unable to extract CRC16 command from ${cmd}"
+   }
 }
 
 private channelNumber(String dni) {
