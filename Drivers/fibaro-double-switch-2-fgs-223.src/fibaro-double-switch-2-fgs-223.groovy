@@ -28,7 +28,7 @@ definition (name: "Fibaro Double Switch 2 FGS-223", namespace: "erocm123", autho
     capability "Polling"
     capability "Configuration"
     capability "Refresh"
-    capability "Zw Multichannel"
+    //capability "Zw Multichannel"
     capability "Energy Meter"
     capability "Power Meter"
     capability "Health Check"
@@ -176,7 +176,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=
         def cmds = []
         cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
         cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-        return response(secureSequence(cmds)) // returns the result of reponse()
+        return response(commands(cmds)) // returns the result of reponse()
     }
 }
 
@@ -205,7 +205,7 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
 			cmds << encap(zwave.meterV2.meterGet(scale: 0), endpoint)
             cmds << encap(zwave.meterV2.meterGet(scale: 2), endpoint)
 	   }
-       return response(secureSequence(cmds))
+       return response(commands(cmds))
     }
 }
 
@@ -273,7 +273,7 @@ def refresh() {
 		cmds << encap(zwave.meterV2.meterGet(scale: 0), endpoint)
         cmds << encap(zwave.meterV2.meterGet(scale: 2), endpoint)
 	}
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def reset() {
@@ -284,14 +284,14 @@ def reset() {
         cmds << encap(zwave.meterV2.meterGet(scale: 0), endpoint)
         cmds << encap(zwave.meterV2.meterGet(scale: 2), endpoint)
     }
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def ping() {
 	def cmds = []
     cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
     cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def zwaveEvent(hubitat.zwave.commands.manufacturerspecificv2.ManufacturerSpecificReport cmd) {
@@ -304,7 +304,7 @@ def poll() {
 	def cmds = []
     cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 1)
     cmds << encap(zwave.switchBinaryV1.switchBinaryGet(), 2)
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def configure() {
@@ -314,7 +314,7 @@ def configure() {
 
     cmds = update_needed_settings()
     
-    if (cmds != []) secureSequence(cmds)
+    if (cmds != []) commands(cmds)
 }
 
 def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
@@ -356,17 +356,17 @@ def updated()
     
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     
-    if (cmds != []) response(secureSequence(cmds))
+    if (cmds != []) commands(cmds)
 }
 
 def on() { 
-   secureSequence([
+   commands([
         encap(zwave.basicV1.basicSet(value: 0xFF), 1),
         encap(zwave.basicV1.basicSet(value: 0xFF), 2)
     ])
 }
 def off() {
-   secureSequence([
+   commands([
         encap(zwave.basicV1.basicSet(value: 0x00), 1),
         encap(zwave.basicV1.basicSet(value: 0x00), 2)
     ])
@@ -375,41 +375,45 @@ def off() {
 def childOn(String dni) {
     logging("childOn($dni)")
     def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0xFF), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
 	cmds
 }
 
 def childOff(String dni) {
     logging("childOff($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.basicV1.basicSet(value: 0x00), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
 	cmds
 }
 
 def childRefresh(String dni) {
     logging("childRefresh($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.switchBinaryV1.switchBinaryGet(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
 	cmds
 }
 
 def childReset(String dni) {
     logging("childReset($dni)")
 	def cmds = []
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterReset(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
-    cmds << new hubitat.device.HubAction(secure(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterReset(), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 0), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
+    cmds << new hubitat.device.HubAction(command(encap(zwave.meterV2.meterGet(scale: 2), channelNumber(dni))), hubitat.device.Protocol.ZWAVE)
 	cmds
 }
 
-private secure(hubitat.zwave.Command cmd) {
-	zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+private command(hubitat.zwave.Command cmd) {
+	if (state.sec) {
+		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+	} else {
+		cmd.format()
+	}
 }
 
-private secureSequence(commands, delay=1500) {
-	delayBetween(commands.collect{ secure(it) }, delay)
+private commands(commands, delay=1000) {
+	delayBetween(commands.collect{ command(it) }, delay)
 }
 
 private encap(cmd, endpoint) {
@@ -423,6 +427,7 @@ private encap(cmd, endpoint) {
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
 	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1]) // can specify command class versions here like in zwave.parse
 	if (encapsulatedCommand) {
+	    state.sec = 1
 		return zwaveEvent(encapsulatedCommand)
 	} else {
 		log.warn "Unable to extract encapsulated cmd from $cmd"
@@ -621,19 +626,6 @@ def integer2Cmd(value, size) {
 		[value4, value3, value2, value1]
 	break
 	}
-}
-
-private command(hubitat.zwave.Command cmd) {
-    
-	if (state.sec && cmd.toString() != "WakeUpIntervalGet()") {
-		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
-	} else {
-		cmd.format()
-	}
-}
-
-private commands(commands, delay=1000) {
-	delayBetween(commands.collect{ command(it) }, delay)
 }
 
 def zwaveEvent(hubitat.zwave.commands.crc16encapv1.Crc16Encap cmd) {
