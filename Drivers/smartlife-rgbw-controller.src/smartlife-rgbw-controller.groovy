@@ -28,6 +28,11 @@ metadata {
         capability "Sensor"
         capability "Configuration"
         capability "Health Check"
+		
+		attribute   "needUpdate", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
+		attribute   "firmware", "string"
         
         command "reset"
         command "setProgram"
@@ -57,7 +62,6 @@ metadata {
     preferences {
         input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         //input "childDevices", "enum", title: "Child Devices\n\nSelect which child devices you want enabled", description: "Tap to set", required: false, options:[["1": "Program 1"], ["2": "Program 2"], ["3": "Program 3"], ["4": "Program 4"], ["5": "Program 5"], ["6": "Program 6"], ["7": "Red Channel"], ["8": "Green Channel"], ["9": "Blue Channel"], ["10": "White1 Channel"], ["11": "White2 Channel"]], defaultValue: "0", multiple: true
-        //input description: "Use the below options to enable child devices for the specified settings. This will allow you to adjust these settings using SmartApps such as Smart Lighting. If any of the options are enabled, make sure you have the appropriate child device handlers installed.\n(Firmware 1.02+)", title: "Child Devices", displayDuringSetup: false, type: "paragraph", element: "paragraph"
         input "p1Child", "bool", title: "Program 1 Child Device", description: "", required: false, defaultValue: false
         input "p2Child", "bool", title: "Program 2 Child Device", description: "", required: false, defaultValue: false
         input "p3Child", "bool", title: "Program 3 Child Device", description: "", required: false, defaultValue: false
@@ -344,7 +348,7 @@ def getDefault(){
     } else if(settings.dcolor == "Random") {
         return "${transition == "false"? "d~" : "f~"}${getHexColor(settings.dcolor)}"
     } else if(settings.dcolor == "Custom") {
-        return "${transition == "false"? "d~" : "f~"}${settings.custom}"
+        return "${settings.custom}"
     } else if(settings.dcolor == "Soft White" || settings.dcolor == "Warm White") {
         if (settings.level == null || settings.level == "0") {
             return "${transition == "false"? "x~" : "w~"}${getDimmedColor(getHexColor(settings.dcolor), "100")}"
@@ -495,6 +499,10 @@ def parse(description) {
     if (result.containsKey("version")) {
        events << createEvent(name:"firmware", value: result.version + "\r\n" + result.date, displayed: false)
     }
+		
+    if (result.containsKey("uptime")) {
+        events << createEvent(name: "uptime", value: result.uptime, displayed: false)
+    }
 
     if (result.containsKey("success")) {
        if (result.success == "true") state.configSuccess = "true" else state.configSuccess = "false" 
@@ -548,12 +556,12 @@ private getScaledColor(color) {
 
 def on() {
     log.debug "on()"
-    getAction("/on?transition=$transition")
+    getAction("/on?transition=$dtransition")
 }
 
 def off() {
     log.debug "off()"
-    getAction("/off?transition=$transition")
+    getAction("/off?transition=$dtransition")
 }
 
 def setLevel(level) {
@@ -676,7 +684,7 @@ def setColor(value) {
         log.debug state.previousRGB
            // if the device is currently on, scale the current RGB values; otherwise scale the previous setting
            uri = "/rgb?value=${getDimmedColor(device.latestValue("switch") == "on" ? device.currentValue("color").substring(1) : state.previousRGB)}"
-           actions.push(getAction("$uri&channels=$channels&transition=$transition"))
+           actions.push(getAction("$uri&channels=$channels&transition=$dtransition"))
         }
         } else {
            // Handle white channel dimmers if they're on or were not previously off (excluding power-off command)
@@ -687,7 +695,7 @@ def setColor(value) {
         
            // if the device is currently on, scale the current RGB values; otherwise scale the previous setting
            uri = "/rgb?value=${getDimmedColor(device.latestValue("switch") == "on" ? device.currentValue("color").substring(1) : state.previousRGB)}"
-           actions.push(getAction("$uri&channels=$channels&transition=$transition"))
+           actions.push(getAction("$uri&channels=$channels&transition=$dtransition"))
         }
         return actions
     }
@@ -696,7 +704,7 @@ def setColor(value) {
        uri = "/w1?value=ff"
     }
 
-    if (uri != null && validValue != false) getAction("$uri&channels=$channels&transition=$transition")
+    if (uri != null && validValue != false) getAction("$uri&channels=$channels&transition=$dtransition")
 
 }
 
@@ -789,8 +797,7 @@ def huesatToRGB(float hue, float sat) {
 }
 
 private rgbwToHSV(Map colorMap) {
-    log.debug "rgbwToHSV(): colorMap: ${colorMap}"
-
+    //log.debug "rgbwToHSV(): colorMap: ${colorMap}"
     if (colorMap.containsKey("r") & colorMap.containsKey("g") & colorMap.containsKey("b")) { 
 
         float r = colorMap.r / 255f
@@ -1022,19 +1029,19 @@ def childSetLevel(String dni, value) {
     level = hex(level)
     switch (channelNumber(dni)) {
         case "7":
-            uri = "/r?value=$level&channels=$channels&transition=$transition"
+            uri = "/r?value=$level&channels=$channels&transition=$dtransition"
         break
         case "8":
-            uri = "/g?value=$level&channels=$channels&transition=$transition"
+            uri = "/g?value=$level&channels=$channels&transition=$dtransition"
         break
         case "9":
-            uri = "/b?value=$level&channels=$channels&transition=$transition"
+            uri = "/b?value=$level&channels=$channels&transition=$dtransition"
         break
         case "10":
-            uri = "/w1?value=$level&channels=$channels&transition=$transition"
+            uri = "/w1?value=$level&channels=$channels&transition=$dtransition"
         break
         case "11":
-            uri = "/w2?value=$level&channels=$channels&transition=$transition"
+            uri = "/w2?value=$level&channels=$channels&transition=$dtransition"
         break
     }
     sendHubCommand(getAction(uri))
@@ -1087,11 +1094,11 @@ def hex2int(value){
 
 def redOn() {
     log.debug "redOn()"
-    getAction("/r?value=ff&channels=$channels&transition=$transition")
+    getAction("/r?value=ff&channels=$channels&transition=$dtransition")
 }
 def redOff() {
     log.debug "redOff()"
-    getAction("/r?value=00&channels=$channels&transition=$transition")
+    getAction("/r?value=00&channels=$channels&transition=$dtransition")
 }
 
 def setRedLevel(value) {
@@ -1100,15 +1107,15 @@ def setRedLevel(value) {
     level = 255 * level/99 as Integer
     log.debug "level: ${level}"
     level = hex(level)
-    getAction("/r?value=$level&channels=$channels&transition=$transition")
+    getAction("/r?value=$level&channels=$channels&transition=$dtransition")
 }
 def greenOn() {
     log.debug "greenOn()"
-    getAction("/g?value=ff&channels=$channels&transition=$transition")
+    getAction("/g?value=ff&channels=$channels&transition=$dtransition")
 }
 def greenOff() {
     log.debug "greenOff()"
-    getAction("/g?value=00&channels=$channels&transition=$transition")
+    getAction("/g?value=00&channels=$channels&transition=$dtransition")
 }
 
 def setGreenLevel(value) {
@@ -1117,15 +1124,15 @@ def setGreenLevel(value) {
     level = 255 * level/99 as Integer
     log.debug "level: ${level}"
     level = hex(level)
-    getAction("/g?value=$level&channels=$channels&transition=$transition")
+    getAction("/g?value=$level&channels=$channels&transition=$dtransition")
 }
 def blueOn() {
     log.debug "blueOn()"
-    getAction("/b?value=ff&channels=$channels&transition=$transition")
+    getAction("/b?value=ff&channels=$channels&transition=$dtransition")
 }
 def blueOff() {
     log.debug "blueOff()"
-    getAction("/b?value=00&channels=$channels&transition=$transition")
+    getAction("/b?value=00&channels=$channels&transition=$dtransition")
 }
 
 def setBlueLevel(value) {
@@ -1134,15 +1141,15 @@ def setBlueLevel(value) {
     level = 255 * level/99 as Integer
     log.debug "level: ${level}"
     level = hex(level)
-    getAction("/b?value=$level&channels=$channels&transition=$transition")
+    getAction("/b?value=$level&channels=$channels&transition=$dtransition")
 }
 def white1On() {
     log.debug "white1On()"
-    getAction("/w1?value=ff&channels=$channels&transition=$transition")
+    getAction("/w1?value=ff&channels=$channels&transition=$dtransition")
 }
 def white1Off() {
     log.debug "white1Off()"
-    getAction("/w1?value=00&channels=$channels&transition=$transition")
+    getAction("/w1?value=00&channels=$channels&transition=$dtransition")
 }
 
 def setWhite1Level(value) {
@@ -1151,15 +1158,15 @@ def setWhite1Level(value) {
     level = 255 * level/99 as Integer
     log.debug "level: ${level}"
     def whiteLevel = hex(level)
-    getAction("/w1?value=$whiteLevel&channels=$channels&transition=$transition")
+    getAction("/w1?value=$whiteLevel&channels=$channels&transition=$dtransition")
 }
 def white2On() {
     log.debug "white2On()"
-    getAction("/w2?value=ff&channels=$channels&transition=$transition")
+    getAction("/w2?value=ff&channels=$channels&transition=$dtransition")
 }
 def white2Off() {
     log.debug "white2Off()"
-    getAction("/w2?value=00&channels=$channels&transition=$transition")
+    getAction("/w2?value=00&channels=$channels&transition=$dtransition")
 }
 
 def setWhite2Level(value) {
@@ -1168,7 +1175,7 @@ def setWhite2Level(value) {
     level = 255 * level/99 as Integer
     log.debug "level: ${level}"
     def whiteLevel = hex(level)
-    getAction("/w2?value=$whiteLevel&channels=$channels&transition=$transition")
+    getAction("/w2?value=$whiteLevel&channels=$channels&transition=$dtransition")
 }
 
 private getHexColor(value){
@@ -1369,12 +1376,12 @@ Default: Off
     <Item label="Off" value="0" />
     <Item label="On" value="1" />
 </Value>
-<Value type="list" byteSize="1" index="transition" label="Default Transition" min="0" max="1" value="0" setting_type="preference" fw="">
+<Value type="list" byteSize="1" index="dtransition" label="Default Transition" min="1" max="2" value="1" setting_type="lan" fw="">
 <Help>
 Default: Fade
 </Help>
-    <Item label="Fade" value="true" />
-    <Item label="Flash" value="false" />
+    <Item label="Fade" value="1" />
+    <Item label="Flash" value="2" />
 </Value>
 <Value type="list" byteSize="1" index="dcolor" label="Default Color" min="" max="" value="" setting_type="lan" fw="">
 <Help>
@@ -1399,8 +1406,8 @@ Default: Previous
 </Value>
 <Value type="text" byteSize="1" index="custom" label="Custom Color in Hex" min="" max="" value="" setting_type="preference" fw="">
 <Help>
-(ie ffffff)
-If \"Custom\" is chosen above as the default color. Default level does not apply if custom hex value is chosen.
+Use a 10 digit hex value rrggbbw1w2 (ie for white1 channel = 100% and red channel = 100% ff0000ff00)
+If \"Custom\" is chosen above as the default color, default level does not apply.
 </Help>
 </Value>
 <Value type="number" byteSize="1" index="level" label="Default Level" min="1" max="100" value="" setting_type="preference" fw="">
