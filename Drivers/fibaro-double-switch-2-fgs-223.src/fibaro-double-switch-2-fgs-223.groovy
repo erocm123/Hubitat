@@ -93,6 +93,7 @@ tiles(scale: 2){
 }
 
 def parse(String description) {
+	//log.debug description
     def result = []
     def cmd = zwave.parse(description)
     if (cmd) {
@@ -332,13 +333,22 @@ def buttonEvent(button, value) {
 	sendEvent(name: value, value: button, isStateChange:true)
 }
 
-/**
-* Triggered when Done button is pushed on Preference Pane
-*/
+def installed() {
+    def cmds = initialize()
+	if (cmds != []) commands(cmds)
+}
+
 def updated()
 {
-	state.enableDebugging = settings.enableDebugging
     logging("updated() is being called")
+    def cmds = initialize()
+    sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)  
+    if (cmds != []) commands(cmds)
+}
+
+def initialize() {
+    log.debug "initialize()"
+	state.enableDebugging = settings.enableDebugging
     if (!childDevices) {
 		createChildDevices()
 	}
@@ -352,12 +362,9 @@ def updated()
 		state.oldLabel = device.label
 	}
     sendEvent(name: "checkInterval", value: 2 * 30 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
-    def cmds = update_needed_settings()
-    
-    sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    
-    if (cmds != []) commands(cmds)
+    return update_needed_settings()
 }
+
 
 def on() { 
    commands([
@@ -425,7 +432,8 @@ private encap(cmd, endpoint) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1]) // can specify command class versions here like in zwave.parse
+	//log.debug cmd
+	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1, , 0x5B: 1]) // can specify command class versions here like in zwave.parse
 	if (encapsulatedCommand) {
 	    state.sec = 1
 		return zwaveEvent(encapsulatedCommand)
@@ -516,6 +524,7 @@ def update_needed_settings()
     if(!state.associationMC1) {
        logging("Adding MultiChannel association group 1")
        cmds << zwave.associationV2.associationRemove(groupingIdentifier: 1, nodeId: [])
+	   //cmds << zwave.associationV2.associationGet(groupingIdentifier: 1)
        cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
        cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 1)
     }
@@ -559,16 +568,17 @@ def convertParam(number, value) {
     def parValue
 	switch (number){
     	case 28:
-            parValue = (value == "true" ? 1 : 0)
-            parValue += (settings."fc_2" == "true" ? 2 : 0)
-            parValue += (settings."fc_3" == "true" ? 4 : 0)
-            parValue += (settings."fc_4" == "true" ? 8 : 0)
+            parValue = (value == true ? 1 : 0)
+            parValue += (settings."fc_2" == true ? 2 : 0)
+            parValue += (settings."fc_3" == true ? 4 : 0)
+            parValue += (settings."fc_4" == true ? 8 : 0)
+		    log.debug parValue
         break
         case 29:
-            parValue = (value == "true" ? 1 : 0)
-            parValue += (settings."sc_2" == "true" ? 2 : 0)
-            parValue += (settings."sc_3" == "true" ? 4 : 0)
-            parValue += (settings."sc_4" == "true" ? 8 : 0)
+            parValue = (value == true ? 1 : 0)
+            parValue += (settings."sc_2" == true ? 2 : 0)
+            parValue += (settings."sc_3" == true ? 4 : 0)
+            parValue += (settings."sc_4" == true ? 8 : 0)
         break
         default:
         	parValue = value
