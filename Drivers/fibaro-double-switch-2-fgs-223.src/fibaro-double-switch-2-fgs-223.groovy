@@ -136,8 +136,10 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd, ep=null) {
             event = [createEvent([name: "switch", value: "on"])]
         } else {
             def allOff = true
-            childDevices.each { n ->
-               if (n.currentState("switch").value != "off") allOff = false
+            childDevices.each {
+                childDevice ->
+				    if (childDevice.deviceNetworkId != "$device.deviceNetworkId-ep$ep") 
+                       if (childDevice.currentState("switch").value != "off") allOff = false
             }
             if (allOff) {
                event = [createEvent([name: "switch", value: "off"])]
@@ -163,8 +165,10 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=
             event = [createEvent([name: "switch", value: "on"])]
         } else {
             def allOff = true
-            childDevices.each { n ->
-               if (n.currentState("switch").value != "off") allOff = false
+            childDevices.each {
+                childDevice ->
+				    if (childDevice.deviceNetworkId != "$device.deviceNetworkId-ep$ep") 
+                       if (childDevice.currentState("switch").value != "off") allOff = false
             }
             if (allOff) {
                event = [createEvent([name: "switch", value: "off"])]
