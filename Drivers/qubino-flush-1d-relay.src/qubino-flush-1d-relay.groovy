@@ -138,7 +138,7 @@ def zwaveEvent(hubitat.zwave.commands.manufacturerspecificv2.ManufacturerSpecifi
     createEvent(name: "manufacturer", value: cmd.manufacturerName)
 }
 
-def zwaveEvent(hubitat.zwave.commands.sensorbinaryv2.SensorBinaryReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.sensorbinaryv1.SensorBinaryReport cmd) {
     logging("SensorBinaryReport: $cmd", 2)
     def children = childDevices
     def childDevice = children.find{it.deviceNetworkId.endsWith("-i2")}
