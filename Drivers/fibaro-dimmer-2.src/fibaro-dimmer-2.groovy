@@ -407,7 +407,7 @@ def updated()
     
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     
-    response(commands(cmds))
+    commands(cmds)
 }
 
 private command(hubitat.zwave.Command cmd) {
