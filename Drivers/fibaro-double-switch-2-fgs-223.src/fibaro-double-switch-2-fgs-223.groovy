@@ -459,8 +459,7 @@ def generate_preferences(configuration_model)
                 input "${it.@index}", "number",
                     title:"${it.@label}\n" + "${it.Help}",
                     range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "list":
                 def items = []
@@ -468,21 +467,18 @@ def generate_preferences(configuration_model)
                 input "${it.@index}", "enum",
                     title:"${it.@label}\n" + "${it.Help}",
                     defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}",
                     options: items
             break
             case "decimal":
                input "${it.@index}", "decimal",
                     title:"${it.@label}\n" + "${it.Help}",
                     range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "boolean":
                input "${it.@index}", "bool",
                     title: it.@label != "" ? "${it.@label}\n" + "${it.Help}" : "" + "${it.Help}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "paragraph":
                input title: "${it.@label}",
