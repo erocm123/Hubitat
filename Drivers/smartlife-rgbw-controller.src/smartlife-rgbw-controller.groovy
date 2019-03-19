@@ -957,21 +957,6 @@ private getHeader(userpass = null){
     return headers
 }
 
-def toAscii(s){
-        StringBuilder sb = new StringBuilder();
-        String ascString = null;
-        long asciiInt;
-                for (int i = 0; i < s.length(); i++){
-                    sb.append((int)s.charAt(i));
-                    sb.append("|");
-                    char c = s.charAt(i);
-                }
-                ascString = sb.toString();
-                asciiInt = Long.parseLong(ascString);
-                return asciiInt;
-}
-
-
 def childOn(String dni) {
     log.debug "childOn($dni)"
     def cmds = []
