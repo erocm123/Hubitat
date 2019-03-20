@@ -190,6 +190,70 @@ def zwaveEvent(hubitat.zwave.commands.sensorbinaryv1.SensorBinaryReport cmd) {
     }
 }
 
+def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
+    logging("NotificationReport: $cmd", 2)
+    def result
+
+    if (cmd.notificationType == 7) {
+    def children = childDevices
+	def childDevice = children.find{it.deviceNetworkId.endsWith("-i2")}
+		switch (cmd.event) {
+			case 0:
+                switch(settings."i2")
+                {
+                    case "Motion Sensor Child Device":
+                        childDevice.sendEvent(name: "motion", value: "active")
+                    break
+                    case "Carbon Monoxide Detector Child Device":
+                        childDevice.sendEvent(name: "carbonMonoxide", value: "detected")
+                    break
+                    case "Carbon Dioxide Detector Child Device":
+                        childDevice.sendEvent(name: "carbonDioxide", value: "detected")
+                    break
+                    case "Water Sensor Child Device":
+                        childDevice.sendEvent(name: "water", value: "wet")
+                    break
+                    case "Smoke Detector Child Device":
+                        childDevice.sendEvent(name: "smoke", value: "detected")
+                    break
+                    case "Contact Sensor Child Device":
+                        childDevice.sendEvent(name: "contact", value: "open")
+                    break
+                    case "Momentary Button Child Device":
+                        childDevice.push()
+                    break
+                }
+			break
+			case 8:
+                switch(settings."i2")
+                {
+			        case "Motion Sensor Child Device":
+                        childDevice.sendEvent(name: "motion", value: "inactive")
+                    break
+                    case "Carbon Monoxide Detector Child Device":
+                        childDevice.sendEvent(name: "carbonMonoxide", value: "clear")
+                    break
+                    case "Carbon Dioxide Detector Child Device":
+                        childDevice.sendEvent(name: "carbonDioxide", value: "clear")
+                    break
+                    case "Water Sensor Child Device":
+                        childDevice.sendEvent(name: "water", value: "dry")
+                    break
+                    case "Smoke Detector Child Device":
+                        childDevice.sendEvent(name: "smoke", value: "clear")
+                    break
+                    case "Contact Sensor Child Device":
+                        childDevice.sendEvent(name: "contact", value: "closed")
+                    break
+                    case "Momentary Button Child Device":
+                        childDevice.release()
+                    break
+                }
+			break
+		}
+	} 
+}
+
 def zwaveEvent(hubitat.zwave.Command cmd) {
     logging("$device.displayName: Unhandled: $cmd", 2)
     [:]
