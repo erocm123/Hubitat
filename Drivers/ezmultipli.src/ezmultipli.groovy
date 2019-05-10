@@ -243,26 +243,29 @@ def setColor(value) {
         mygreen=value.green >=128 ? 255 : 0
         myblue=value.blue>=128 ? 255 : 0
     }
-    cmds << new hubitat.device.HubAction("200100", hubitat.device.Protocol.ZWAVE)
-    cmds << "delay 1000"
+    cmds << "200100"
+    cmds << "delay 250"
 	if (myred!=0) {
-        cmds << new hubitat.device.HubAction("33060002FF", hubitat.device.Protocol.ZWAVE)
-        cmds << new hubitat.device.HubAction("330702", hubitat.device.Protocol.ZWAVE)
+        cmds << "33060002FF"
+		//cmds << "delay 150"
+        cmds << "330702"
     }
     if (mygreen!=0) {
-        cmds << new hubitat.device.HubAction("33060003FF", hubitat.device.Protocol.ZWAVE)
-        cmds << new hubitat.device.HubAction("330703", hubitat.device.Protocol.ZWAVE)
+        cmds << "33060003FF"
+		//cmds << "delay 150"
+        cmds << "330703"
     }
     if (myblue!=0) {
-        cmds << new hubitat.device.HubAction("3306000400", hubitat.device.Protocol.ZWAVE)
-        cmds << new hubitat.device.HubAction("330704", hubitat.device.Protocol.ZWAVE)
+        cmds << "3306000400"
+		//cmds << "delay 150"
+        cmds << "330704"
     }
-
+    cmds << "delay 100"
     cmds << zwave.basicV1.basicGet().format()
 
     hexValue = rgbToHex([r:myred, g:mygreen, b:myblue])
     if(hexValue) sendEvent(name: "color", value: hexValue, displayed: true)
-    delayBetween(cmds, 100)
+	cmds
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
