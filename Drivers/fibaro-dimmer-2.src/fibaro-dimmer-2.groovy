@@ -21,7 +21,7 @@
  */
  
 metadata {
-	definition (name: "Fibaro Dimmer 2 new", namespace: "erocm123", author: "Eric Maycock") {
+	definition (name: "Fibaro Dimmer 2", namespace: "erocm123", author: "Eric Maycock") {
 		capability "Actuator"
 		capability "Switch"
 		capability "Switch Level"
@@ -138,20 +138,20 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
         switch (cmd.sceneId) {
             // Toggle S1
             case 10: // Off to On
-                buttonEvent(1, "pushed")
+                buttonEvent(1, "held")
             break
             case 11: // On to Off
-                buttonEvent(1, "held")
+                buttonEvent(1, "released")
             break
             case 14: // 2x click
                 buttonEvent(1, "doubleTapped")
             break
             // Toggle S2
             case 20: // Off to On
-                buttonEvent(2, "pushed")
+                buttonEvent(2, "held")
             break
             case 21: // On to Off
-                buttonEvent(2, "held")
+                buttonEvent(2, "released")
             break
             case 24: // 2x click
                 buttonEvent(2, "doubleTapped")
