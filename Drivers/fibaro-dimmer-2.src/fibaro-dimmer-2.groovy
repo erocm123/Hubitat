@@ -16,22 +16,25 @@
  *  Unless required by applicable law or agreed to in writing, software distributed under the License is distributed
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
- *
+ * 
+ * added button to to current state so Hubitat apps can pick up the 3 buttons and added doubletap and releasable button: borristhecat 24/5/19
  */
  
 metadata {
-	definition (name: "Fibaro Dimmer 2", namespace: "erocm123", author: "Eric Maycock") {
+	definition (name: "Fibaro Dimmer 2 new", namespace: "erocm123", author: "Eric Maycock") {
 		capability "Actuator"
 		capability "Switch"
 		capability "Switch Level"
 		capability "Refresh"
 		capability "Configuration"
 		capability "Sensor"
-        capability "Polling"
+       // capability "Polling"
         capability "Energy Meter"
         capability "Power Meter"
         capability "PushableButton"
 		capability "HoldableButton"
+		capability "ReleasableButton"
+        capability "DoubleTapableButton"
         capability "Health Check"
         
         attribute   "needUpdate", "string"
@@ -47,47 +50,6 @@ metadata {
         input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
 		generate_preferences(configuration_model())
     }
-
-	simulator {
-
-	}
-
-	tiles(scale: 2){
-        multiAttributeTile(name:"switch", type: "lighting", width: 6, height: 4, canChangeIcon: true){
-			tileAttribute ("device.switch", key: "PRIMARY_CONTROL") {
-				attributeState "on", label:'${name}', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-				attributeState "off", label:'${name}', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
-				attributeState "turningOn", label:'${name}', action:"switch.off", icon:"st.switches.light.on", backgroundColor:"#00a0dc", nextState:"turningOff"
-				attributeState "turningOff", label:'${name}', action:"switch.on", icon:"st.switches.light.off", backgroundColor:"#ffffff", nextState:"turningOn"
-			}
-            tileAttribute ("device.level", key: "SLIDER_CONTROL") {
-				attributeState "level", action:"switch level.setLevel"
-			}
-            tileAttribute ("statusText", key: "SECONDARY_CONTROL") {
-           		attributeState "statusText", label:'${currentValue}'       		
-            }
-	    }
-		standardTile("refresh", "device.switch", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'', action:"refresh.refresh", icon:"st.secondary.refresh"
-		}
-        valueTile("power", "device.power", decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue} W'
-		}
-		valueTile("energy", "device.energy", decoration: "flat", width: 2, height: 2) {
-			state "default", label:'${currentValue} kWh'
-		}
-		standardTile("reset", "device.energy", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-			state "default", label:'reset kWh', action:"reset"
-		}
-        standardTile("configure", "device.needUpdate", inactiveLabel: false, decoration: "flat", width: 2, height: 2) {
-            state "NO" , label:'', action:"configuration.configure", icon:"st.secondary.configure"
-            state "YES", label:'', action:"configuration.configure", icon:"https://github.com/erocm123/SmartThingsPublic/raw/master/devicetypes/erocm123/qubino-flush-1d-relay.src/configure@2x.png"
-        }
-
-
-		main "switch"
-		details (["switch", "power", "energy", "refresh", "configure", "reset"])
-	}
 }
 
 def parse(String description) {
@@ -143,29 +105,29 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
                 buttonEvent(1, "pushed")
             break
             case 13: // Release
-                buttonEvent(1, "held")
+                buttonEvent(1, "released")
             break
             case 14: // 2x click
-                buttonEvent(2, "pushed")
+                buttonEvent(1, "doubleTapped")
             break
             case 17: // Brightening
-                buttonEvent(2, "held")
+                buttonEvent(1, "held")
             break
             // Roller blinds S2
             case 11: // Turn Off
-                buttonEvent(3, "pushed")
+                buttonEvent(2, "pushed")
             break
             case 13: // Release
-                buttonEvent(3, "held")
+                buttonEvent(2, "released")
             break
             case 14: // 2x click
-                buttonEvent(4, "pushed")
+                buttonEvent(2, "doubleTapped")
             break
             case 15: // 3x click
-                buttonEvent(5, "pushed")
+                buttonEvent(3, "pushed")
             break
             case 18: // Dimming
-                buttonEvent(4, "held")
+                buttonEvent(2, "held")
             break
             default:
                 logging("Unhandled SceneActivationSet: ${cmd}")
@@ -182,20 +144,20 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
                 buttonEvent(1, "held")
             break
             case 14: // 2x click
-                buttonEvent(2, "pushed")
+                buttonEvent(1, "doubleTapped")
             break
             // Toggle S2
             case 20: // Off to On
-                buttonEvent(3, "pushed")
+                buttonEvent(2, "pushed")
             break
             case 21: // On to Off
-                buttonEvent(3, "held")
+                buttonEvent(2, "held")
             break
             case 24: // 2x click
-                buttonEvent(4, "pushed")
+                buttonEvent(2, "doubleTapped")
             break
             case 25: // 3x click
-                buttonEvent(5, "pushed")
+                buttonEvent(3, "pushed")
             break
             default:
                 logging("Unhandled SceneActivationSet: ${cmd}")
@@ -210,29 +172,29 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
                 buttonEvent(1, "pushed")
             break
             case 14: // 2x click
-                buttonEvent(2, "pushed")
+                buttonEvent(1, "doubleTapped")
             break
             case 12: // held
                 buttonEvent(1, "held")
             break
             case 13: // release
-                buttonEvent(2, "held")
+                buttonEvent(1, "released")
             break
             // Momentary S2
             case 26: // 1x click
-                buttonEvent(3, "pushed")
+                buttonEvent(2, "pushed")
             break
             case 24: // 2x click
-                buttonEvent(4, "pushed")
+                buttonEvent(2, "doubleTapped")
             break
             case 25: // 3x click
-                buttonEvent(5, "pushed")
+                buttonEvent(3, "pushed")
             break
             case 22: // held
-                buttonEvent(3, "held")
+                buttonEvent(2, "held")
             break
             case 23: // release
-                buttonEvent(4, "held")
+                buttonEvent(2, "released")
             break
             default:
                 logging("Unhandled SceneActivationSet: ${cmd}")
@@ -365,7 +327,7 @@ def refresh() {
 
 def ping() {
    	logging("$device.displayName ping()")
-
+	
     def cmds = []
 
     cmds << zwave.meterV2.meterGet(scale: 0)
@@ -398,7 +360,8 @@ def setLevel(level) {
 
 def updated()
 {
-    state.enableDebugging = settings.enableDebugging
+    installed()
+	state.enableDebugging = settings.enableDebugging
     logging("updated() is being called")
     sendEvent(name: "checkInterval", value: 2 * 30 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
     state.needfwUpdate = ""
@@ -408,6 +371,11 @@ def updated()
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
     
     commands(cmds)
+}
+
+def installed(){
+    log.warn "installed..."
+    sendEvent(name: "numberOfButtons", value: 3)
 }
 
 private command(hubitat.zwave.Command cmd) {
@@ -461,7 +429,7 @@ def generate_preferences(configuration_model)
             break
         }  
     }
-}
+} 
 
 
 def update_current_properties(cmd)
@@ -535,7 +503,7 @@ def update_needed_settings()
     
     sendEvent(name:"needUpdate", value: isUpdateNeeded, displayed:false, isStateChange: true)
     return cmds
-}
+} 
 
 /**
 * Convert 1 and 2 bytes values to integer
@@ -663,7 +631,7 @@ def configuration_model()
 {
 '''
 <configuration>
-  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="disabled" fw="3.08">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -671,7 +639,7 @@ Range: 1~98
 Default: 1
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="disabled" fw="3.08">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -780,7 +748,7 @@ Default: 0
     <Item label="Disabled" value="0" />
     <Item label="Enabled" value="1" />
   </Value>
-  <Value type="list" byteSize="1" index="29" label="Switch functionality of S1 and S2" min="0" max="1" value="0" setting_type="zwave" fw="3.08">
+  <Value type="list" byteSize="1" index="29" label="Switch functionality of S1 and S2" min="0" max="1" value="0" setting_type="disabled" fw="3.08">
     <Help>
 This parameter allows for switching the role of keys connected to S1 and S2 without changes in connection. 
 Range: 0~1
