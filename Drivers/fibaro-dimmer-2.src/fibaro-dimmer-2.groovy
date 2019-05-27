@@ -360,7 +360,7 @@ def setLevel(level) {
 
 def updated()
 {
-    installed()
+    sendEvent(name: "numberOfButtons", value: 3)
 	state.enableDebugging = settings.enableDebugging
     logging("updated() is being called")
     sendEvent(name: "checkInterval", value: 2 * 30 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
