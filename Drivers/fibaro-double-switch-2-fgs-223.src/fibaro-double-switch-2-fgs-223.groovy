@@ -168,7 +168,7 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=
             childDevices.each {
                 childDevice ->
 				    if (childDevice.deviceNetworkId != "$device.deviceNetworkId-ep$ep") 
-                       if (childDevice.currentState("switch").value != "off") allOff = false
+                       if (childDevice.currentState("switch")?.value != "off") allOff = false
             }
             if (allOff) {
                event = [createEvent([name: "switch", value: "off"])]
