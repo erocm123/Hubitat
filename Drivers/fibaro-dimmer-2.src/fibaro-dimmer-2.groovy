@@ -17,11 +17,11 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  * 
- * added button to to current state so Hubitat apps can pick up the 3 buttons and added doubletap and releasable button: borristhecat 24/5/19
+ * added button to the current state so Hubitat apps can pick up the 3 buttons and added doubletap and releasable button: borristhecat 24/5/19
  */
  
 metadata {
-	definition (name: "Fibaro Dimmer 2", namespace: "erocm123", author: "Eric Maycock") {
+	definition (name: "Fibaro Dimmer 2", namespace: "erocm123", author: "Eric Maycock", importUrl: "https://raw.githubusercontent.com/erocm123/Hubitat/master/Drivers/fibaro-dimmer-2.src/fibaro-dimmer-2.groovy") {
 		capability "Actuator"
 		capability "Switch"
 		capability "Switch Level"
