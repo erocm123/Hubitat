@@ -472,7 +472,7 @@ private void createChildDevices() {
     if ( device.deviceNetworkId =~ /^([0-9A-F]{2}){6}$/) {
      try {
         for (i in 1..4) {
-	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", null,
+	       addChildDevice("Switch Child Device", "${device.deviceNetworkId}-ep${i}", 
 		      [completedSetup: true, label: "${device.displayName} (R${i})",
 		      isComponent: false, componentName: "ep$i", componentLabel: "Relay $i"])
         }
