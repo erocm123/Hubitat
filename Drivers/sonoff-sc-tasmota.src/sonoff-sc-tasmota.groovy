@@ -38,6 +38,7 @@ metadata {
         attribute   "noise", "string"
 		attribute   "airQuality", "string"
 		attribute   "uptime", "string"
+		attribute   "ip", "string"
 	}
 
 	simulator {
@@ -265,7 +266,7 @@ def parse(description) {
     }
     }
     
-    if (!device.currentValue("ip") || (device.currentValue("ip") != getDataValue("ip"))) events << createEvent(name: 'ip', value: getDataValue("ip"))
+    if (!device.currentValue("ip") || (device.currentValue("ip") != getDataValue("ip"))) events << createEvent(name: 'ip', value: getDataValue("ip"), displayed: false)
     
     return events
 }
@@ -417,7 +418,7 @@ private String convertPortToHex(port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
