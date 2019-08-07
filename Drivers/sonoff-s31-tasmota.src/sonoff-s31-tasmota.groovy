@@ -237,16 +237,9 @@ def ping() {
 }
 
 private getAction(uri){ 
-
-  log.debug uri
   updateDNI()
-  
-  def userpass
-  
-  if(password != null && password != "") 
-    userpass = encodeCredentials("admin", password)
     
-  def headers = getHeader(userpass)
+  def headers = getHeader()
 
   def hubAction = new hubitat.device.HubAction(
     method: "GET",
@@ -259,12 +252,7 @@ private getAction(uri){
 private postAction(uri, data){ 
   updateDNI()
   
-  def userpass
-  
-  if(password != null && password != "") 
-    userpass = encodeCredentials("admin", password)
-  
-  def headers = getHeader(userpass)
+  def headers = getHeader()
   
   def hubAction = new hubitat.device.HubAction(
     method: "POST",
@@ -317,7 +305,7 @@ private String convertPortToHex(port) {
 
 private encodeCredentials(username, password){
 	def userpassascii = "${username}:${password}"
-    def userpass = "Basic " + userpassascii.encodeAsBase64().toString()
+    def userpass = "Basic " + userpassascii.bytes.encodeBase64().toString()
     return userpass
 }
 
