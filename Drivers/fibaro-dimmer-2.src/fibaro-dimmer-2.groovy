@@ -18,6 +18,7 @@
  *  for the specific language governing permissions and limitations under the License.
  * 
  * added button to the current state so Hubitat apps can pick up the 3 buttons and added doubletap and releasable button: borristhecat 24/5/19
+ * added basicSet zwave event so physical button presses are handled by the hub. /eriktack 20190812
  */
  
 metadata {
@@ -89,6 +90,15 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     } else {
         return events
     }
+}
+
+def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd, ep=null) {
+    logging("BasicSet: $cmd : Endpoint: $ep")
+    def event
+    if (!ep) {
+        event = [createEvent([name: "switch", value: cmd.value? "on":"off"])]					 
+    }
+    return event
 }
 
 def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) {
