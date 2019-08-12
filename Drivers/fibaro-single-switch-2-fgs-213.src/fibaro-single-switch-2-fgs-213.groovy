@@ -79,7 +79,7 @@ tiles(scale: 2){
 
 }
     preferences {
-        input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+        input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", type: "paragraph", element: "paragraph"
 		generate_preferences(configuration_model())
     }
 }
@@ -177,7 +177,7 @@ def refresh() {
     cmds << zwave.switchBinaryV1.switchBinaryGet()
     cmds << zwave.meterV2.meterGet(scale: 0)
     cmds << zwave.meterV2.meterGet(scale: 2)
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def reset() {
@@ -185,7 +185,7 @@ def reset() {
     cmds << zwave.meterV2.meterReset()
     cmds << zwave.meterV2.meterGet(scale: 0)
     cmds << zwave.meterV2.meterGet(scale: 2)
-	secureSequence(cmds, 1000)
+	commands(cmds, 1000)
 }
 
 def ping() {
@@ -209,7 +209,7 @@ def configure() {
 
     cmds = update_needed_settings()
     
-    if (cmds != []) secureSequence(cmds)
+    if (cmds != []) commands(cmds)
 }
 
 def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cmd) {
@@ -224,7 +224,12 @@ def zwaveEvent(hubitat.zwave.commands.centralscenev1.CentralSceneNotification cm
 
 def buttonEvent(button, value) {
     logging("buttonEvent() Button:$button, Value:$value")
-	createEvent(name: "button", value: value, data: [buttonNumber: button], descriptionText: "$device.displayName button $button was $value", isStateChange: true)
+    sendEvent(name: value, value: button, isStateChange:true)
+}
+
+def installed() {
+    def cmds = initialize()
+    if (cmds != []) commands(cmds)
 }
 
 /**
@@ -232,33 +237,40 @@ def buttonEvent(button, value) {
 */
 def updated()
 {
-	state.enableDebugging = settings.enableDebugging
     logging("updated() is being called")
+    def cmds = initialize()
+    sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)  
+    if (cmds != []) commands(cmds)
+}
+
+def initialize() {
+    log.debug "initialize()"
+    state.enableDebugging = settings.enableDebugging
     sendEvent(name: "checkInterval", value: 2 * 30 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
-    def cmds = update_needed_settings()
-    
-    sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
-    
-    if (cmds != []) response(secureSequence(cmds))
+    return update_needed_settings()
 }
 
 def on() { 
-   secureSequence([
+   commands([
         zwave.basicV1.basicSet(value: 0xFF)
     ])
 }
 def off() {
-   secureSequence([
+   commands([
         zwave.basicV1.basicSet(value: 0x00)
     ])
 }
 
-private secure(hubitat.zwave.Command cmd) {
-	zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+private command(hubitat.zwave.Command cmd) {
+	if (state.sec) {
+		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+	} else {
+		cmd.format()
+	}
 }
 
-private secureSequence(commands, delay=1500) {
-	delayBetween(commands.collect{ secure(it) }, delay)
+private commands(commands, delay=1000) {
+	delayBetween(commands.collect{ command(it) }, delay)
 }
 
 private encap(cmd, endpoint) {
@@ -270,8 +282,11 @@ private encap(cmd, endpoint) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
+	//log.debug cmd
+	//def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1, , 0x5B: 1]) // can specify command class versions here like in zwave.parse
 	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1]) // can specify command class versions here like in zwave.parse
 	if (encapsulatedCommand) {
+		state.sec = 1
 		return zwaveEvent(encapsulatedCommand)
 	} else {
 		log.warn "Unable to extract encapsulated cmd from $cmd"
@@ -291,8 +306,7 @@ def generate_preferences(configuration_model)
                 input "${it.@index}", "number",
                     title:"${it.@label}\n" + "${it.Help}",
                     range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "list":
                 def items = []
@@ -300,21 +314,18 @@ def generate_preferences(configuration_model)
                 input "${it.@index}", "enum",
                     title:"${it.@label}\n" + "${it.Help}",
                     defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}",
                     options: items
             break
             case "decimal":
                input "${it.@index}", "decimal",
                     title:"${it.@label}\n" + "${it.Help}",
                     range: "${it.@min}..${it.@max}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "boolean":
                input "${it.@index}", "bool",
                     title: it.@label != "" ? "${it.@label}\n" + "${it.Help}" : "" + "${it.Help}",
-                    defaultValue: "${it.@value}",
-                    displayDuringSetup: "${it.@displayDuringSetup}"
+                    defaultValue: "${it.@value}"
             break
             case "paragraph":
                input title: "${it.@label}",
@@ -393,16 +404,16 @@ def convertParam(number, value) {
     def parValue
 	switch (number){
     	case 28:
-            parValue = (value == "true" ? 1 : 0)
-            parValue += (settings."fc_2" == "true" ? 2 : 0)
-            parValue += (settings."fc_3" == "true" ? 4 : 0)
-            parValue += (settings."fc_4" == "true" ? 8 : 0)
+            parValue = (value == true ? 1 : 0)
+            parValue += (settings."fc_2" == true ? 2 : 0)
+            parValue += (settings."fc_3" == true ? 4 : 0)
+            parValue += (settings."fc_4" == true ? 8 : 0)
         break
         case 29:
-            parValue = (value == "true" ? 1 : 0)
-            parValue += (settings."sc_2" == "true" ? 2 : 0)
-            parValue += (settings."sc_3" == "true" ? 4 : 0)
-            parValue += (settings."sc_4" == "true" ? 8 : 0)
+            parValue = (value == true ? 1 : 0)
+            parValue += (settings."sc_2" == true ? 2 : 0)
+            parValue += (settings."sc_3" == true ? 4 : 0)
+            parValue += (settings."sc_4" == true ? 8 : 0)
         break
         default:
         	parValue = value
@@ -462,27 +473,13 @@ def integer2Cmd(value, size) {
 	}
 }
 
-private command(hubitat.zwave.Command cmd) {
-    
-	if (state.sec && cmd.toString() != "WakeUpIntervalGet()") {
-		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
-	} else {
-		cmd.format()
-	}
-}
-
-private commands(commands, delay=1000) {
-	delayBetween(commands.collect{ command(it) }, delay)
-}
-
 def zwaveEvent(hubitat.zwave.commands.crc16encapv1.Crc16Encap cmd) {
-	def versions = [0x31: 5, 0x30: 1, 0x9C: 1, 0x70: 2, 0x85: 2]
-	def version = versions[cmd.commandClass as Integer]
-	def ccObj = version ? zwave.commandClass(cmd.commandClass, version) : zwave.commandClass(cmd.commandClass)
-	def encapsulatedCommand = ccObj?.command(cmd.command)?.parse(cmd.data)
-	if (encapsulatedCommand) {
-		zwaveEvent(encapsulatedCommand)
-	}
+        def encapsulatedCommand = zwave.getCommand(cmd.commandClass, cmd.command, cmd.data, 1)
+        if (encapsulatedCommand) {
+                zwaveEvent(encapsulatedCommand)
+        } else {
+                log.warn "Unable to extract CRC16 command from ${cmd}"
+        }
 }
 
 def configuration_model()
