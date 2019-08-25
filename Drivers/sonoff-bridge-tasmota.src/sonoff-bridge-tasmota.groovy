@@ -126,6 +126,15 @@ metadata {
              "ip", "uptime"])
 }
 
+def childExists(ep) {
+    def children = childDevices
+    def childDevice = children.find{it.deviceNetworkId.endsWith(ep)}
+    if (childDevice) 
+        return true
+    else
+        return false
+}
+
 private void createChildDevices() {
     if (cdt01 && cdt01 != "Disabled" && !childExists("ep01")) {
         addChildDevice(cdt01, "${device.deviceNetworkId}-ep01", null, [completedSetup: true, label: "${device.label} - Child Device 1",
@@ -167,9 +176,10 @@ def updated()
     cmds = update_needed_settings()
     sendEvent(name: "checkInterval", value: 2 * 15 * 60 + 2 * 60, displayed: false, data: [protocol: "lan", hubHardwareId: device.hub.hardwareID])
     sendEvent(name:"needUpdate", value: device.currentValue("needUpdate"), displayed:false, isStateChange: true)
+    sendEvent(name: "numberOfButtons", value: 12)
     if (state.realTemperature != null) sendEvent(name:"temperature", value: getAdjustedTemp(state.realTemperature))
     if (state.realHumidity != null) sendEvent(name:"humidity", value: getAdjustedHumidity(state.realHumidity))
-    if (cmds != []) response(cmds)
+    if (cmds != []) cmds
 }
 
 private def logging(message, level) {
@@ -187,7 +197,7 @@ private def logging(message, level) {
 }
 
 def buttonEvent(button, value, type = "digital") {
-    createEvent(name: "button", value: value, data: [buttonNumber: button], descriptionText: "$device.displayName button $button was $value", isStateChange: true, type: type)
+    createEvent(name: value, value: button, isStateChange:true)
 }
 
 def parse(description) {
