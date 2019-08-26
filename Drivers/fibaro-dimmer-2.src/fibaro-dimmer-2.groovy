@@ -19,6 +19,7 @@
  * 
  * added button to the current state so Hubitat apps can pick up the 3 buttons and added doubletap and releasable button: borristhecat 24/5/19
  * added basicSet zwave event so physical button presses are handled by the hub. /eriktack 20190812
+ * added physical and digital send events. Split logging for info and debug. Added the ability to hide the configure settings. borristhecat 26/8/19
  */
  
 metadata {
@@ -48,8 +49,11 @@ metadata {
 	}
     
     preferences {
-        input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-		generate_preferences(configuration_model())
+        input name: "settingEnable", type: "bool", title: "Enable setting", defaultValue: false
+        input name: "enableDebugging", type: "bool", title: "Enable Debug Logging?", defaultValue: false
+        input name: "enableInfo", type: "bool", title: "Enable Info Logging?", defaultValue: true
+        if (settingEnable) input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
+	if (settingEnable) generate_preferences(configuration_model())
     }
 }
 
@@ -75,12 +79,12 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     logging("BasicReport: $cmd")
     def events = []
 	if (cmd.value == 0) {
-		events << createEvent(name: "switch", value: "off")
+		events << createEvent(name: "switch", value: "off", type: "digital")
 	} else if (cmd.value == 255) {
-		events << createEvent(name: "switch", value: "on")
+		events << createEvent(name: "switch", value: "on", type: "digital")
 	} else {
-		events << createEvent(name: "switch", value: "on")
-        events << createEvent(name: "switchLevel", value: cmd.value)
+		events << createEvent(name: "switch", value: "on", type: "digital")
+        events << createEvent(name: "switchLevel", value: cmd.value, type: "digital")
 	}
     
     def request = update_needed_settings()
@@ -108,7 +112,7 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
     logging("Configuration for preference \"Switch Type\" is set to ${settings."20"}")
     
     if (settings."20" == "2") {
-        logging("Switch configured as Roller blinds")
+        Info("Switch configured as Roller blinds")
         switch (cmd.sceneId) {
             // Roller blinds S1
             case 10: // Turn On (1x click)
@@ -144,7 +148,7 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
             break
         }
     } else if (settings."20" == "1") {
-        logging("Switch configured as Toggle")
+        Info("Switch configured as Toggle")
         switch (cmd.sceneId) {
             // Toggle S1
             case 10: // Off to On
@@ -175,7 +179,7 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
         
         }
     } else {
-        if (settings."20" == "0") logging("Switch configured as Momentary") else logging("Switch type not configured") 
+        if (settings."20" == "0") Info("Switch configured as Momentary") else logging("Switch type not configured") 
         switch (cmd.sceneId) {
             // Momentary S1
             case 16: // 1x click
@@ -214,8 +218,8 @@ def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) 
 }
 
 def buttonEvent(button, value) {
-    logging("buttonEvent() Button:$button, Value:$value")
-	sendEvent(name: value, value: button, isStateChange:true)
+    Info("buttonEvent() Button:$button, Value:$value")
+	sendEvent(name: value, value: button, isStateChange:true, type: "physical")
 }
 
 def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
@@ -227,10 +231,10 @@ def dimmerEvents(hubitat.zwave.Command cmd) {
 	logging(cmd)
 	def result = []
 	def value = (cmd.value ? "on" : "off")
-	def switchEvent = createEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value")
+	def switchEvent = createEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value", type: "physical")
 	result << switchEvent
 	if (cmd.value) {
-		result << createEvent(name: "level", value: cmd.value, unit: "%")
+		result << createEvent(name: "level", value: cmd.value, unit: "%", type: "physical")
 	}
 	if (switchEvent.isStateChange) {
 		result << response(["delay 3000", zwave.meterV2.meterGet(scale: 2).format()])
@@ -276,13 +280,13 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
 	logging(cmd)
 	if (cmd.meterType == 1) {
 		if (cmd.scale == 0) {
-			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh")
+			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kWh", type: "digital")
 		} else if (cmd.scale == 1) {
-			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kVAh")
+			sendEvent(name: "energy", value: cmd.scaledMeterValue, unit: "kVAh", type: "digital")
 		} else if (cmd.scale == 2) {
-			sendEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W")
+			sendEvent(name: "power", value: Math.round(cmd.scaledMeterValue), unit: "W", type: "digital")
 		} else {
-			sendEvent(name: "electric", value: cmd.scaledMeterValue, unit: ["pulses", "V", "A", "R/Z", ""][cmd.scale - 3])
+			sendEvent(name: "electric", value: cmd.scaledMeterValue, unit: ["pulses", "V", "A", "R/Z", ""][cmd.scale - 3], type: "digital")
 		}
 	}
 }
@@ -304,10 +308,12 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv1.SensorMultilevelReport 
 
 def on() {
 	commands([zwave.basicV1.basicSet(value: 0xFF), zwave.basicV1.basicGet()])
+	Info("ON sent")
 }
 
 def off() {
 	commands([zwave.basicV1.basicSet(value: 0x00), zwave.basicV1.basicGet()])
+	Info("OFF sent")
 }
 
 def refresh() {
@@ -327,7 +333,7 @@ def refresh() {
     } else {
         cmds << zwave.meterV2.meterGet(scale: 0)
         cmds << zwave.meterV2.meterGet(scale: 2)
-	    cmds << zwave.basicV1.basicGet()
+	cmds << zwave.basicV1.basicGet()
     }
 
     state.lastRefresh = now()
@@ -358,7 +364,7 @@ def setLevel(level, duration) {
 }
 
 def setLevel(level) {
-	logging("setLevel value:$level")
+	Info("setLevel value:$level")
 	if(level > 99) level = 99
     if(level < 1) level = 1
     def cmds = []
@@ -372,6 +378,7 @@ def updated()
 {
     sendEvent(name: "numberOfButtons", value: 3)
 	state.enableDebugging = settings.enableDebugging
+	state.enableInfo = settings.enableInfo
     logging("updated() is being called")
     sendEvent(name: "checkInterval", value: 2 * 30 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
     state.needfwUpdate = ""
@@ -583,8 +590,9 @@ def zwaveEvent(hubitat.zwave.commands.firmwareupdatemdv2.FirmwareMdReport cmd){
 }
 
 def configure() {
-    state.enableDebugging = settings.enableDebugging
-    logging("Configuring Device For SmartThings Use")
+  	state.enableDebugging = settings.enableDebugging
+	state.enableInfo = settings.enableInfo
+    logging("Configuring Device For Hubitat Use")
     def cmds = []
 
     cmds = update_needed_settings()
@@ -636,12 +644,15 @@ private def logging(message) {
     if (state.enableDebugging == null || state.enableDebugging == true) log.debug "$message"
 }
 
+private def Info(message) {
+    if (state.enableInfo == null || state.enableInfo == true) log.info "$message"
+}
 
 def configuration_model()
 {
 '''
 <configuration>
-  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="disabled" fw="3.08">
+  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="zwave" fw="3.08">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -649,7 +660,7 @@ Range: 1~98
 Default: 1
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="disabled" fw="3.08">
+  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="zwave" fw="3.08">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -872,11 +883,12 @@ Default: 0
     <Item label="Disabled" value="0" />
     <Item label="Enabled" value="1" />
   </Value>
-    <Value type="boolean" index="enableDebugging" label="Enable Debug Logging?" value="true" setting_type="preference" fw="3.08">
-    <Help>
-
-    </Help>
-  </Value>
 </configuration>
 '''
+ //   <Value type="boolean" index="enableDebugging" label="Enable Debug Logging?" value="true" setting_type="preference" fw="3.08">
+ //   <Help>
+
+//    </Help>
+//  </Value>
+
 }
