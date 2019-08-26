@@ -80,10 +80,13 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
     def events = []
 	if (cmd.value == 0) {
 		events << createEvent(name: "switch", value: "off", type: "digital")
+        Info("OFF sent")
 	} else if (cmd.value == 255) {
 		events << createEvent(name: "switch", value: "on", type: "digital")
+        Info("ON sent")
 	} else {
 		events << createEvent(name: "switch", value: "on", type: "digital")
+        Info("ON sent")
         events << createEvent(name: "switchLevel", value: cmd.value, type: "digital")
 	}
     
@@ -308,12 +311,10 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv1.SensorMultilevelReport 
 
 def on() {
 	commands([zwave.basicV1.basicSet(value: 0xFF), zwave.basicV1.basicGet()])
-	Info("ON sent")
 }
 
 def off() {
 	commands([zwave.basicV1.basicSet(value: 0x00), zwave.basicV1.basicGet()])
-	Info("OFF sent")
 }
 
 def refresh() {
