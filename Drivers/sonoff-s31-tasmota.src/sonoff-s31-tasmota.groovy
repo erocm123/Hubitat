@@ -33,6 +33,9 @@ metadata {
         
         attribute   "amperage", "number"
         attribute   "needUpdate", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
+        
         command "reboot"
 	}
 
@@ -41,9 +44,9 @@ metadata {
     
     preferences {
         input description: "Once you change values on this page, the corner of the \"configuration\" icon will change orange until all configuration parameters are updated.", title: "Settings", displayDuringSetup: false, type: "paragraph", element: "paragraph"
-        input(name: "override", type: "bool", title: "Override IP", description: "Override the automatically discovered IP address?", displayDuringSetup: true, required: false)
-        input(name: "ipAddress", type: "string", title: "IP Address", description: "IP Address of Sonoff", displayDuringSetup: true, required: false)
-		input(name: "port", type: "number", title: "Port", description: "Port", displayDuringSetup: true, required: false, defaultValue: 80)
+        //input(name: "override", type: "bool", title: "Override IP", description: "Override the automatically discovered IP address?", displayDuringSetup: true, required: false)
+        //input(name: "ipAddress", type: "string", title: "IP Address", description: "IP Address of Sonoff", displayDuringSetup: true, required: false)
+		//input(name: "port", type: "number", title: "Port", description: "Port", displayDuringSetup: true, required: false, defaultValue: 80)
 		generate_preferences(configuration_model())
 	}
 
@@ -135,7 +138,7 @@ def parse(description) {
 
     if (!state.mac || state.mac != descMap["mac"]) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
-        updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -190,12 +193,15 @@ def parse(description) {
 }
 
 def getCommandString(command, value) {
-    def uri = "/cm"
+    def uri = "/cm?"
+    if (password) {
+        uri += "user=admin&password=${password}&"
+    }
 	if (value) {
-		uri += "?cmnd=${command}%20${value}"
+		uri += "cmnd=${command}%20${value}"
 	}
 	else {
-		uri += "?cmnd=${command}"
+		uri += "cmnd=${command}"
 	}
     return uri
 }
@@ -456,48 +462,13 @@ def configuration_model()
 <Help>
 </Help>
 </Value>
-<Value type="list" byteSize="1" index="pos" label="Boot Up State" min="0" max="2" value="0" setting_type="lan" fw="">
+<Value type="list" byteSize="1" index="PowerOnState" label="Power On State" min="0" max="3" value="3" setting_type="lan" fw="">
 <Help>
-Default: Off
+Default: Previous
 </Help>
     <Item label="Off" value="0" />
     <Item label="On" value="1" />
-    <Item label="Previous" value="2" />
-</Value>
-<Value type="number" byteSize="1" index="autooff1" label="Auto Off" min="0" max="65536" value="0" setting_type="lan" fw="">
-<Help>
-Automatically turn the switch off after this many seconds.
-Range: 0 to 65536
-Default: 0 (Disabled)
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="wreport" label="W Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="vreport" label="V Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="areport" label="A Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="ureport" label="Uptime Report Interval" min="0" max="65536" value="300" setting_type="lan" fw="">
-<Help>
-Send uptime reports at this interval (in seconds).
-Range: 0 (Disabled) to 65536
-Default: 300
-</Help>
+    <Item label="Previous" value="3" />
 </Value>
 <Value type="list" index="logLevel" label="Debug Logging Level?" value="0" setting_type="preference" fw="">
 <Help>
