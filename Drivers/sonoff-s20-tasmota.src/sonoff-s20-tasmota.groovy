@@ -31,6 +31,8 @@ metadata {
         attribute   "amperage", "number"
         attribute   "needUpdate", "string"
 		attribute   "uptime", "string"
+        attribute   "ip", "string"
+        
         command "reboot"
 	}
 
@@ -209,12 +211,15 @@ def parse(description) {
 }
 
 def getCommandString(command, value) {
-    def uri = "/cm"
+    def uri = "/cm?"
+    if (password) {
+        uri += "user=admin&password=${password}&"
+    }
 	if (value) {
-		uri += "?cmnd=${command}%20${value}"
+		uri += "cmnd=${command}%20${value}"
 	}
 	else {
-		uri += "?cmnd=${command}"
+		uri += "cmnd=${command}"
 	}
     return uri
 }
@@ -246,7 +251,7 @@ def off() {
 def refresh() {
 	log.debug "refresh()"
     def cmds = []
-    cmds << getAction("/status")
+    cmds << getAction(getCommandString("Status", "0"))
     return cmds
 }
 
@@ -474,49 +479,6 @@ def configuration_model()
 <configuration>
 <Value type="password" byteSize="1" index="password" label="Password" min="" max="" value="" setting_type="preference" fw="">
 <Help>
-</Help>
-</Value>
-<Value type="list" byteSize="1" index="pos" label="Boot Up State" min="0" max="2" value="0" setting_type="lan" fw="">
-<Help>
-Default: Off
-</Help>
-    <Item label="Off" value="0" />
-    <Item label="On" value="1" />
-    <Item label="Previous" value="2" />
-</Value>
-<Value type="number" byteSize="1" index="autooff1" label="Auto Off" min="0" max="65536" value="0" setting_type="lan" fw="">
-<Help>
-Automatically turn the switch off after this many seconds.
-Range: 0 to 65536
-Default: 0 (Disabled)
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="wreport" label="W Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="vreport" label="V Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="areport" label="A Report Interval" min="0" max="65536" value="60" setting_type="lan" fw="">
-<Help>
-In seconds
-Range: 0 to 65536
-Default: 60
-</Help>
-</Value>
-<Value type="number" byteSize="1" index="ureport" label="Uptime Report Interval" min="0" max="65536" value="300" setting_type="lan" fw="">
-<Help>
-Send uptime reports at this interval (in seconds).
-Range: 0 (Disabled) to 65536
-Default: 300
 </Help>
 </Value>
 <Value type="list" index="logLevel" label="Debug Logging Level?" value="0" setting_type="preference" fw="">
