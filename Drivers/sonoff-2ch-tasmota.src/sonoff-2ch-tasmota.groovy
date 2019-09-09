@@ -31,6 +31,8 @@ metadata {
         command "reboot"
         
         attribute   "needUpdate", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
 	}
 
 	simulator {
@@ -129,7 +131,7 @@ def parse(description) {
 
     if (!state.mac || state.mac != descMap["mac"]) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
-        updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -630,6 +632,10 @@ def configuration_model()
 {
 '''
 <configuration>
+<Value type="password" byteSize="1" index="password" label="Password" min="" max="" value="" setting_type="preference" fw="">
+<Help>
+</Help>
+</Value>
 <Value type="list" byteSize="1" index="PowerOnState" label="Power On State" min="0" max="3" value="3" setting_type="lan" fw="">
 <Help>
 Default: Previous
