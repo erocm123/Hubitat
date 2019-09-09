@@ -565,20 +565,7 @@ def configuration_model()
 <Help>
 </Help>
 </Value>
-<Value type="byte" byteSize="1" index="SetOption81" label="Enable SmartThings Support" min="0" max="1" value="1" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-</Value>
-<Value type="list" byteSize="1" index="LedPower" label="LED Power" min="0" max="1" value="1" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-    <Item label="OFF" value="0" />
-    <Item label="ON" value="1" />
-</Value>
-<Value type="byte" byteSize="1" index="LedState" label="LED State" min="0" max="8" value="8" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-</Value><Value type="number" byteSize="1" index="tempOffset" label="Temperature Offset" min="-99" max="99" value="0" setting_type="preference" fw="">
+<Value type="number" byteSize="1" index="tempOffset" label="Temperature Offset" min="-99" max="99" value="0" setting_type="preference" fw="">
 <Help>
 Range: -99 to 99
 Default: 0
