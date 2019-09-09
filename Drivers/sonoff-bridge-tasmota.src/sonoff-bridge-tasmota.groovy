@@ -35,6 +35,8 @@ metadata {
                 
         attribute   "needUpdate", "string"
         attribute   "noise", "string"
+        attribute   "uptime", "string"
+        attribute   "ip", "string"
 	}
 
 	simulator {
@@ -213,7 +215,7 @@ def parse(description) {
 
     if (!state.mac || state.mac != descMap["mac"]) {
 		log.debug "Mac address of device found ${descMap["mac"]}"
-        updateDataValue("mac", descMap["mac"])
+        state.mac = descMap["mac"]
 	}
     
     if (state.mac != null && state.dni != state.mac) state.dni = setDeviceNetworkId(state.mac)
@@ -575,6 +577,9 @@ def update_needed_settings()
     def configuration = new XmlSlurper().parseText(configuration_model())
     def isUpdateNeeded = "NO"
     
+    cmds << getAction(getCommandString("SetOption81", "1"))
+    cmds << getAction(getCommandString("LedPower", "1"))
+    cmds << getAction(getCommandString("LedState", "8"))
     cmds << getAction(getCommandString("HubitatHost", device.hub.getDataValue("localIP")))
     cmds << getAction(getCommandString("HubitatPort", device.hub.getDataValue("localSrvPortTCP")))
     
@@ -613,20 +618,7 @@ def configuration_model()
 <Help>
 </Help>
 </Value>
-<Value type="byte" byteSize="1" index="SetOption81" label="Enable SmartThings Support" min="0" max="1" value="1" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-</Value>
-<Value type="list" byteSize="1" index="LedPower" label="LED Power" min="0" max="1" value="1" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-    <Item label="OFF" value="0" />
-    <Item label="ON" value="1" />
-</Value>
-<Value type="byte" byteSize="1" index="LedState" label="LED State" min="0" max="8" value="8" setting_type="lan" fw="" hidden="true">
-<Help>
-</Help>
-</Value><Value type="number" byteSize="1" index="tempOffset" label="Temperature Offset" min="-99" max="99" value="0" setting_type="preference" fw="">
+<Value type="number" byteSize="1" index="tempOffset" label="Temperature Offset" min="-99" max="99" value="0" setting_type="preference" fw="">
 <Help>
 Range: -99 to 99
 Default: 0
