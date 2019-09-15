@@ -244,10 +244,11 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep) {
 	def event = [:]
 	def cmds = []
 	if (cmd.scale < 2) {
-		def val = Math.round(cmd.scaledMeterValue*100)/100
+		def val = Math.round((cmd.scaledMeterValue? cmd.scaledMeterValue : 0)*100)/100
 		event = endpointEvent(ep, [name: "energy", value: val, unit: ["kWh", "kVAh"][cmd.scale]])
 	} else {
-		event = endpointEvent(ep, [name: "power", value: (Math.round(cmd.scaledMeterValue * 100)/100), unit: "W"])
+		def val = Math.round((cmd.scaledMeterValue? cmd.scaledMeterValue : 0)*100)/100
+		event = endpointEvent(ep, [name: "power", value: val, unit: "W"])
 	}
     
     // check if we need to request temperature
