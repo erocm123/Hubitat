@@ -143,7 +143,7 @@ def parse(description) {
 
     if (result.containsKey("POWER")) {
         log.debug "POWER: $result.POWER"
-        events << createEvent(name: "switch", value: result.POWER)
+        events << createEvent(name: "switch", value: result.POWER.toLowerCase())
     }
     if (result.containsKey("LoadAvg")) {
         log.debug "LoadAvg: $result.LoadAvg"
