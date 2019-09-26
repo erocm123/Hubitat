@@ -168,7 +168,7 @@ def parse(description) {
             events << update_current_properties(result)
     }
     if (result.containsKey("POWER")) {
-        events << createEvent(name: "switch", value: result.POWER)
+        events << createEvent(name: "switch", value: result.POWER.toLowerCase())
     }
     if (result.containsKey("uptime")) {
         events << createEvent(name: 'uptime', value: result.uptime, displayed: false)
