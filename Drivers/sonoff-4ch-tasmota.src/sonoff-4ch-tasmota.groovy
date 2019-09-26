@@ -156,35 +156,35 @@ def parse(description) {
         log.debug "POWER1: $result.POWER1"
         def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep1"}
         if (childDevice) {         
-            childDevice.sendEvent(name: "switch", value: result.POWER1)
+            childDevice.sendEvent(name: "switch", value: result.POWER1.toLowerCase())
         }
     }
     if (result.containsKey("POWER2")) {
         log.debug "POWER2: $result.POWER2"
         def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep2"}
         if (childDevice) {         
-            childDevice.sendEvent(name: "switch", value: result.POWER2)
+            childDevice.sendEvent(name: "switch", value: result.POWER2.toLowerCase())
         }
     }
     if (result.containsKey("POWER3")) {
         log.debug "POWER3: $result.POWER3"
         def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep3"}
         if (childDevice) {         
-            childDevice.sendEvent(name: "switch", value: result.POWER3)
+            childDevice.sendEvent(name: "switch", value: result.POWER3.toLowerCase())
         }
     }
     if (result.containsKey("POWER4")) {
         log.debug "POWER4: $result.POWER4"
         def childDevice = childDevices.find{it.deviceNetworkId == "$device.deviceNetworkId-ep4"}
         if (childDevice) {         
-            childDevice.sendEvent(name: "switch", value: result.POWER4)
+            childDevice.sendEvent(name: "switch", value: result.POWER4.toLowerCase())
         }
     }
 
     def allOff = true
     childDevices.each {
         childDevice ->
-        if (childDevice.currentState("switch").value != "OFF") allOff = false
+        if (childDevice.currentState("switch").value != "off") allOff = false
     }
 
     if (allOff) {
