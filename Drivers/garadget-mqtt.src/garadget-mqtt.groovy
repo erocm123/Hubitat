@@ -23,7 +23,7 @@ metadata {
         name: "Garadget MQTT",
         namespace: "erocm123",
         author: "Eric Maycock",
-        importUrl: "https://raw.githubusercontent.com/erocm123/Hubitat/Drivers/garadget-mqtt.src/garadget-mqtt.groovy"
+        importUrl: "https://raw.githubusercontent.com/erocm123/Hubitat/master/Drivers/garadget-mqtt.src/garadget-mqtt.groovy"
     )
     {
         capability "Switch"
