@@ -40,6 +40,7 @@ metadata {
         capability "Health Check"
         
         attribute   "needUpdate", "string"
+        attribute   "firmware", "String"
 
         fingerprint mfr: "010F", prod: "0102", model: "2000", deviceJoinName: "Fibaro Dimmer 2"
 
@@ -57,59 +58,64 @@ metadata {
     }
 }
 
-def parse(String description) {
-	def result = null
-	if (description.startsWith("Err")) {
-	    result = createEvent(descriptionText:description, isStateChange:true)
-	} else if (description != "updated") {
-		def cmd = zwave.parse(description, [0x20: 1, 0x84: 1, 0x98: 1, 0x56: 1, 0x60: 3])
-		if (cmd) {
-			result = zwaveEvent(cmd)
-		}
-	}
-    
-    //def statusTextmsg = ""
-    //if (device.currentState('power') && device.currentState('energy')) statusTextmsg = "${device.currentState('power').value} W ${device.currentState('energy').value} kWh"
-    //sendEvent(name:"statusText", value:statusTextmsg, displayed:false)
-    
-	return result
+private getCommandClassVersions() {
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 1, // Configuration
+     0x98: 1, // Security
+     0x60: 3, // Multi Channel
+     0x8E: 2, // Multi Channel Association
+     0x26: 1, // Switch Multilevel
+     0x87: 1, // Indicator
+     0x72: 2, // Manufacturer Specific
+     0x5B: 1, // Central Scene
+     0x32: 3, // Meter
+     0x85: 2, // Association
+     0x86: 1, // Version
+     0x75: 2  // Protection
+    ]
+}
+
+def parse(description) {
+    def result = null
+    if (description.startsWith("Err 106")) {
+        state.sec = 0
+        result = createEvent(descriptionText: description, isStateChange: true)
+    } else if (description != "updated") {
+        def cmd = zwave.parse(description, commandClassVersions)
+        if (cmd) {
+            result = zwaveEvent(cmd)
+            //log.debug("'$cmd' parsed to $result")
+        } else {
+            log.debug "Couldn't zwave.parse '$description'" 
+        }
+    }
+    result
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
-    logging("BasicReport: $cmd")
-    def events = []
-	if (cmd.value == 0) {
-		events << createEvent(name: "switch", value: "off", type: "digital")
-        Info("OFF sent")
-	} else if (cmd.value == 255) {
-		events << createEvent(name: "switch", value: "on", type: "digital")
-        Info("ON sent")
-	} else {
-		events << createEvent(name: "switch", value: "on", type: "digital")
-        Info("ON sent")
-        events << createEvent(name: "switchLevel", value: cmd.value, type: "digital")
-	}
-    
+    logging(cmd)
     def request = update_needed_settings()
     
     if(request != []){
-        return [response(commands(request)), events]
+        return [response(commands(request))]
     } else {
-        return events
+        return null
     }
 }
 
 def zwaveEvent(hubitat.zwave.commands.basicv1.BasicSet cmd, ep=null) {
-    logging("BasicSet: $cmd : Endpoint: $ep")
-    def event
+    logging("$cmd : Endpoint: $ep")
+    /*def event
     if (!ep) {
         event = [createEvent([name: "switch", value: cmd.value? "on":"off"])]					 
     }
-    return event
+    return event*/
 }
 
 def zwaveEvent(hubitat.zwave.commands.sceneactivationv1.SceneActivationSet cmd) {
-    logging("SceneActivationSet: $cmd")
+    logging(cmd)
     logging("sceneId: $cmd.sceneId")
     logging("dimmingDuration: $cmd.dimmingDuration")
     logging("Configuration for preference \"Switch Type\" is set to ${settings."20"}")
@@ -225,19 +231,18 @@ def buttonEvent(button, value) {
 	sendEvent(name: value, value: button, isStateChange:true, type: "physical")
 }
 
-def zwaveEvent(hubitat.zwave.commands.switchmultilevelv3.SwitchMultilevelReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.switchmultilevelv1.SwitchMultilevelReport cmd) {
 	logging(cmd)
-	dimmerEvents(cmd)
+	dimmerEvents(cmd, (!state.lastRan || now() <= state.lastRan + 2000)?"digital":"physical")
 }
 
-def dimmerEvents(hubitat.zwave.Command cmd) {
-	logging(cmd)
+def dimmerEvents(hubitat.zwave.Command cmd, source = null) {
 	def result = []
 	def value = (cmd.value ? "on" : "off")
-	def switchEvent = createEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value", type: "physical")
+	def switchEvent = createEvent(name: "switch", value: value, descriptionText: "$device.displayName was turned $value [${source?source:'physical'}]", type: source?source:"physical")
 	result << switchEvent
 	if (cmd.value) {
-		result << createEvent(name: "level", value: cmd.value, unit: "%", type: "physical")
+		result << createEvent(name: "level", value: cmd.value, unit: "%", descriptionText: "$device.displayName was set to ${cmd.value}% [${source?source:'physical'}]", type: source?source:"physical")
 	}
 	if (switchEvent.isStateChange) {
 		result << response(["delay 3000", zwave.meterV2.meterGet(scale: 2).format()])
@@ -246,12 +251,12 @@ def dimmerEvents(hubitat.zwave.Command cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
-	logging("AssociationReport $cmd")
+	logging(cmd)
     state."association${cmd.groupingIdentifier}" = cmd.nodeId[0]
 }
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
-	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x84: 1])
+	def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
 	if (encapsulatedCommand) {
 		state.sec = 1
 		def result = zwaveEvent(encapsulatedCommand)
@@ -295,7 +300,7 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd) {
 }
 
 def zwaveEvent(hubitat.zwave.commands.sensormultilevelv1.SensorMultilevelReport cmd){
-    logging("SensorMultilevelReport: $cmd")
+    logging(cmd)
 	def map = [:]
 	switch (cmd.sensorType) {
 		case 4:
@@ -310,10 +315,12 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv1.SensorMultilevelReport 
 }
 
 def on() {
+    state.lastRan = now()
 	commands([zwave.basicV1.basicSet(value: 0xFF), zwave.basicV1.basicGet()])
 }
 
 def off() {
+    state.lastRan = now()
 	commands([zwave.basicV1.basicSet(value: 0x00), zwave.basicV1.basicGet()])
 }
 
@@ -355,17 +362,19 @@ def ping() {
 }
 
 def setLevel(level, duration) {
+    state.lastRan = now()
 	logging("setLevel value:$level, duration:$duration")
     def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
 	logging("dimmingDuration: $dimmingDuration")
     commands([
-        zwave.switchMultilevelV2.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: dimmingDuration),
+        zwave.switchMultilevelV1.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: dimmingDuration),
         zwave.switchMultilevelV1.switchMultilevelGet()
     ])
 }
 
 def setLevel(level) {
-	Info("setLevel value:$level")
+    state.lastRan = now()
+    logging("setLevel value:$level")
 	if(level > 99) level = 99
     if(level < 1) level = 1
     def cmds = []
@@ -397,11 +406,11 @@ def installed(){
 }
 
 private command(hubitat.zwave.Command cmd) {
-	if (state.sec) {
-		zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
-	} else {
-		cmd.format()
-	}
+    if (getDataValue("zwaveSecurePairingComplete") == "true") {
+        zwave.securityV1.securityMessageEncapsulation().encapsulate(cmd).format()
+    } else {
+        cmd.format()
+    }
 }
 
 private commands(commands, delay=1500) {
@@ -481,7 +490,7 @@ def update_needed_settings()
     
     if(!state.needfwUpdate || state.needfwUpdate == ""){
        logging("Requesting device firmware version")
-       cmds << zwave.firmwareUpdateMdV2.firmwareMdGet()
+       cmds << zwave.versionV1.versionGet()
     }   
     if(!state.association1 || state.association1 == "" || state.association1 == "1"){
        logging("Setting association group 1")
@@ -499,7 +508,7 @@ def update_needed_settings()
         if ("${it.@setting_type}" == "zwave"){
             if (currentProperties."${it.@index}" == null)
             {
-                if (device.currentValue("currentFirmware") == null || "${it.@fw}".indexOf(device.currentValue("currentFirmware")) >= 0){
+                if (device.currentValue("firmware") == null || it.@fw == "" || "${it.@fw}".indexOf(device.currentValue("firmware")) >= 0){
                     isUpdateNeeded = "YES"
                     logging("Current value of parameter ${it.@index} is unknown")
                     cmds << zwave.configurationV1.configurationGet(parameterNumber: it.@index.toInteger())
@@ -507,7 +516,7 @@ def update_needed_settings()
             }
             else if (settings."${it.@index}" != null && convertParam(it.@index.toInteger(), cmd2Integer(currentProperties."${it.@index}")) != settings."${it.@index}".toInteger())
             { 
-                if (device.currentValue("currentFirmware") == null || "${it.@fw}".indexOf(device.currentValue("currentFirmware")) >= 0){
+                if (device.currentValue("firmware") == null || it.@fw == "" || "${it.@fw}".indexOf(device.currentValue("firmware")) >= 0){
                     isUpdateNeeded = "YES"
 
                     logging("Parameter ${it.@index} will be updated to " + settings."${it.@index}")
@@ -570,9 +579,10 @@ def integer2Cmd(value, size) {
 	}
 }
 
-def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
+def zwaveEvent(hubitat.zwave.commands.configurationv1.ConfigurationReport cmd) {
      update_current_properties(cmd)
      logging("${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd2Integer(cmd.configurationValue)}'")
+     return null
 }
 
 def zwaveEvent(hubitat.zwave.commands.firmwareupdatemdv2.FirmwareMdReport cmd){
@@ -588,6 +598,21 @@ def zwaveEvent(hubitat.zwave.commands.firmwareupdatemdv2.FirmwareMdReport cmd){
     state.needfwUpdate = "false"
     updateDataValue("firmware", firmwareVersion.toString())
     createEvent(name: "currentFirmware", value: firmwareVersion)
+}
+
+def zwaveEvent(hubitat.zwave.commands.versionv1.VersionReport cmd) {
+    logging("${device.label?device.label:device.name}: ${cmd}")
+    if(cmd.applicationVersion != null && cmd.applicationSubVersion != null) {
+	    def firmware = "${cmd.applicationVersion}.${cmd.applicationSubVersion.toString().padLeft(2,'0')}"
+        logging("${device.label?device.label:device.name}: Firmware report received: ${firmware}")
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    } else if(cmd.firmware0Version != null && cmd.firmware0SubVersion != null) {
+	    def firmware = "${cmd.firmware0Version}.${cmd.firmware0SubVersion.toString().padLeft(2,'0')}"
+        logging("${device.label?device.label:device.name}: Firmware report received: ${firmware}")
+        state.needfwUpdate = "false"
+        createEvent(name: "firmware", value: "${firmware}")
+    }
 }
 
 def configure() {
@@ -653,7 +678,7 @@ def configuration_model()
 {
 '''
 <configuration>
-  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="1" label="Minimum brightness level" min="1" max="98" value="1" setting_type="zwave" fw="">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -661,7 +686,7 @@ Range: 1~98
 Default: 1
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="2" label="Maximum brightness level" min="2" max="99" value="99" setting_type="zwave" fw="">
     <Help>
 (parameter is set automatically during the calibration process)
 The parameter can be changed manually after the calibration.
@@ -669,35 +694,35 @@ Range: 2~99
 Default: 99
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="5" label="Automatic control - dimming step size" min="1" max="99" value="1" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="5" label="Automatic control - dimming step size" min="1" max="99" value="1" setting_type="zwave" fw="">
     <Help>
 This parameter defines the percentage value of dimming step during the automatic control.
 Range: 1~99
 Default: 1
     </Help>
   </Value>
-    <Value type="short" byteSize="2" index="6" label="Automatic control - time of a dimming step" min="0" max="255" value="1" setting_type="zwave" fw="3.08">
+    <Value type="short" byteSize="2" index="6" label="Automatic control - time of a dimming step" min="0" max="255" value="1" setting_type="zwave" fw="">
     <Help>
 This parameter defines the time of single dimming step set in parameter 5 during the automatic control.
 Range: 0~255
 Default: 1
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="7" label="Manual control - dimming step size" min="1" max="99" value="1" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="7" label="Manual control - dimming step size" min="1" max="99" value="1" setting_type="zwave" fw="">
     <Help>
 This parameter defines the percentage value of dimming step during the manual control.
 Range: 1~99
 Default: 1
     </Help>
   </Value>
-    <Value type="short" byteSize="2" index="8" label="Manual control - time of a dimming step" min="0" max="255" value="5" setting_type="zwave" fw="3.08">
+    <Value type="short" byteSize="2" index="8" label="Manual control - time of a dimming step" min="0" max="255" value="5" setting_type="zwave" fw="">
     <Help>
 This parameter defines the time of single dimming step set in parameter 7 during the manual control.
 Range: 0~255
 Default: 5
     </Help>
   </Value>
-    <Value type="list" byteSize="1" index="9" label="State of the device after a power failure" min="0" max="1" value="1" setting_type="zwave" fw="3.08">
+    <Value type="list" byteSize="1" index="9" label="State of the device after a power failure" min="0" max="1" value="1" setting_type="zwave" fw="">
     <Help>
 The Dimmer 2 will return to the last state before power failure.
 0 - the Dimmer 2 does not save the state before a power failure, it returns to the "off" position
@@ -708,21 +733,21 @@ Default: 1
         <Item label="Off" value="0" />
         <Item label="Previous State" value="1" />
   </Value>
-  <Value type="short" byteSize="2" index="10" label="Timer functionality (auto - off)" min="0" max="32767" value="0" setting_type="zwave" fw="3.08">
+  <Value type="short" byteSize="2" index="10" label="Timer functionality (auto - off)" min="0" max="32767" value="0" setting_type="zwave" fw="">
     <Help>
 This parameter allows to automatically switch off the device after specified time (seconds) from switching on the light source.
 Range: 1~32767
 Default: 0
     </Help>
   </Value>
-  <Value type="byte" byteSize="1" index="19" label="Forced switch on brightness level" min="0" max="99" value="0" setting_type="zwave" fw="3.08">
+  <Value type="byte" byteSize="1" index="19" label="Forced switch on brightness level" min="0" max="99" value="0" setting_type="zwave" fw="">
     <Help>
 If the parameter is active, switching on the Dimmer 2 (S1 single click) will always set this brightness level.
 Range: 0~99
 Default: 0
     </Help>
   </Value>
-    <Value type="list" byteSize="1" index="20" label="Switch type" min="0" max="2" value="0" setting_type="zwave" fw="3.08">
+    <Value type="list" byteSize="1" index="20" label="Switch type" min="0" max="2" value="0" setting_type="zwave" fw="">
     <Help>
 Choose between momentary, toggle and roller blind switch.
 Range: 0~2
@@ -732,7 +757,7 @@ Default: 0
     <Item label="Toggle" value="1" />
     <Item label="Roller Blind" value="2" />
   </Value>
-      <Value type="list" byteSize="1" index="22" label="Assign toggle switch status to the device status " min="0" max="1" value="0" setting_type="zwave" fw="3.08">
+      <Value type="list" byteSize="1" index="22" label="Assign toggle switch status to the device status " min="0" max="1" value="0" setting_type="zwave" fw="">
     <Help>
 By default each change of toggle switch position results in action of Dimmer 2 (switch on/off) regardless the physical connection of contacts.
 0 - device changes status on switch status change
@@ -743,7 +768,7 @@ Default: 0
     <Item label="Default" value="0" />
     <Item label="Synchronized" value="1" />
   </Value>
-  <Value type="list" byteSize="1" index="23" label="Double click option" min="0" max="1" value="1" setting_type="zwave" fw="3.08">
+  <Value type="list" byteSize="1" index="23" label="Double click option" min="0" max="1" value="1" setting_type="zwave" fw="">
     <Help>
 set the brightness level to MAX
 Range: 0~1
@@ -752,7 +777,7 @@ Default: 1
     <Item label="Disabled" value="0" />
     <Item label="Enabled" value="1" />
   </Value>
-    <Value type="list" byteSize="1" index="26" label="The function of 3-way switch" min="0" max="1" value="0" setting_type="zwave" fw="3.08">
+    <Value type="list" byteSize="1" index="26" label="The function of 3-way switch" min="0" max="1" value="0" setting_type="zwave" fw="">
     <Help>
 Switch no. 2 controls the Dimmer 2 additionally (in 3-way switch mode). Function disabled for parameter 20 set to 2 (roller blind switch). 
 Range: 0~1
@@ -761,7 +786,7 @@ Default: 0
     <Item label="Disabled" value="0" />
     <Item label="Enabled" value="1" />
   </Value>
-  <Value type="list" byteSize="1" index="28" label="Scene activation functionality" min="0" max="1" value="1" setting_type="zwave" fw="3.08">
+  <Value type="list" byteSize="1" index="28" label="Scene activation functionality" min="0" max="1" value="1" setting_type="zwave" fw="">
     <Help>
 SCENE ID depends on the switch type configurations. 
 Range: 0~1
@@ -770,7 +795,7 @@ Default: 0
     <Item label="Disabled" value="0" />
     <Item label="Enabled" value="1" />
   </Value>
-  <Value type="list" byteSize="1" index="29" label="Switch functionality of S1 and S2" min="0" max="1" value="0" setting_type="disabled" fw="3.08">
+  <Value type="list" byteSize="1" index="29" label="Switch functionality of S1 and S2" min="0" max="1" value="0" setting_type="disabled" fw="">
     <Help>
 This parameter allows for switching the role of keys connected to S1 and S2 without changes in connection. 
 Range: 0~1
@@ -779,7 +804,7 @@ Default: 0
     <Item label="Standard" value="0" />
     <Item label="Switched" value="1" />
   </Value>
-    <Value type="list" byteSize="1" index="35" label="Auto-calibration after power on" min="0" max="4" value="1" setting_type="zwave" fw="3.08">
+    <Value type="list" byteSize="1" index="35" label="Auto-calibration after power on" min="0" max="4" value="1" setting_type="zwave" fw="">
     <Help>
 This parameter determines the trigger of auto-calibration procedure, e.g. power on, load error, etc.
 0 - No auto-calibration of the load after power on
@@ -796,7 +821,7 @@ Default: 1
     <Item label="3" value="3" />
     <Item label="4" value="4" />
   </Value>
-<Value type="short" byteSize="2" index="39" label="Max Power load" min="0" max="350" value="250" setting_type="zwave" fw="3.08">
+<Value type="short" byteSize="2" index="39" label="Max Power load" min="0" max="350" value="250" setting_type="zwave" fw="">
     <Help>
 This parameter defines the maximum load for a dimmer.
 Range: 0~350
@@ -854,28 +879,28 @@ Range: 1~32000 (1s-32000s)
 Default: 600 (10 min)
     </Help>
   </Value>
-    <Value type="byte" byteSize="1" index="50" label="Active power reports" min="0" max="100" value="10" setting_type="zwave" fw="3.08">
+    <Value type="byte" byteSize="1" index="50" label="Active power reports" min="0" max="100" value="10" setting_type="zwave" fw="">
     <Help>
 The parameter defines the power level change that will result in a new power report being sent. The value is a percentage of the previous report.
 Range: 0~100
 Default: 10
     </Help>
   </Value>
-    <Value type="short" byteSize="2" index="52" label="Periodic active power and energy reports" min="0" max="32767" value="3600" setting_type="zwave" fw="3.08">
+    <Value type="short" byteSize="2" index="52" label="Periodic active power and energy reports" min="0" max="32767" value="3600" setting_type="zwave" fw="">
     <Help>
 Parameter 52 defines a time period between consecutive reports. Timer is reset and counted from zero after each report. 
 Range: 0~32767
 Default: 3600
     </Help>
   </Value>
-    <Value type="short" byteSize="2" index="53" label="Energy reports" min="0" max="255" value="10" setting_type="zwave" fw="3.08">
+    <Value type="short" byteSize="2" index="53" label="Energy reports" min="0" max="255" value="10" setting_type="zwave" fw="">
     <Help>
 Energy level change which will result in sending a new energy report.
 Range: 0~255
 Default: 10
     </Help>
   </Value>
-    <Value type="list" byteSize="1" index="54" label="Self-measurement" min="0" max="1" value="0" setting_type="zwave" fw="3.08">
+    <Value type="list" byteSize="1" index="54" label="Self-measurement" min="0" max="1" value="0" setting_type="zwave" fw="">
     <Help>
 The Dimmer 2 may include active power and energy consumed by itself in reports sent to the main controller.
 Range: 0~1
