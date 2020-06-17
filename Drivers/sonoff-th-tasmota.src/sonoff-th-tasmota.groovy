@@ -156,19 +156,29 @@ def parse(description) {
     
     //log.debug "result: ${result}"
         
-    if (result.containsKey("StatusSNS")) result = result.StatusSNS
-    
-    if (result.containsKey("AM2301")) {
-        if (result.AM2301.containsKey("Humidity"))
-            log.debug "Humidity: ${getAdjustedHumidity(state.realHumidity? state.realHumidity:0)}"
-            state.realHumidity = Math.round((result.AM2301.Humidity as Double) * 100) / 100
-            events << createEvent(name: "humidity", value:"${getAdjustedHumidity(state.realHumidity)}", unit:"%")
-        if (result.AM2301.containsKey("Temperature")) {
-            log.debug "Temperature: ${getAdjustedTemp(state.realTemperature? state.realTemperature:0)}"
-            state.realTemperature = convertTemperatureIfNeeded(result.AM2301.Temperature.toFloat(), result.TempUnit, 1)
-            events << createEvent(name:"temperature", value:"${getAdjustedTemp(state.realTemperature)}", unit:"${location.temperatureScale}")
+    if (result.containsKey("StatusSNS")) {
+        def StatusSNS = result.StatusSNS
+        if (StatusSNS.containsKey("DS18B20")) {
+            if (StatusSNS.DS18B20.containsKey("Temperature")) {
+                log.debug "Temperature: ${getAdjustedTemp(state.realTemperature? state.realTemperature:0)}"
+                state.realTemperature = convertTemperatureIfNeeded(StatusSNS.DS18B20.Temperature.toFloat(), StatusSNS.TempUnit, 1)
+                events << createEvent(name:"temperature", value:"${getAdjustedTemp(state.realTemperature)}", unit:"${location.temperatureScale}")
+            }
+        }
+        if (StatusSNS.containsKey("AM2301")) {
+            if (StatusSNS.AM2301.containsKey("Humidity"))
+                log.debug "Humidity: ${getAdjustedHumidity(state.realHumidity? state.realHumidity:0)}"
+                state.realHumidity = Math.round((StatusSNS.AM2301.Humidity as Double) * 100) / 100
+                events << createEvent(name: "humidity", value:"${getAdjustedHumidity(state.realHumidity)}", unit:"%")
+            if (StatusSNS.AM2301.containsKey("Temperature")) {
+                log.debug "Temperature: ${getAdjustedTemp(state.realTemperature? state.realTemperature:0)}"
+                state.realTemperature = convertTemperatureIfNeeded(StatusSNS.AM2301.Temperature.toFloat(), StatusSNS.TempUnit, 1)
+                events << createEvent(name:"temperature", value:"${getAdjustedTemp(state.realTemperature)}", unit:"${location.temperatureScale}")
+            }
         }
     }
+
+    if (result.containsKey("StatusSTS")) result = result.StatusSTS
 
     if (result.containsKey("POWER")) {
         log.debug "POWER: $result.POWER"
