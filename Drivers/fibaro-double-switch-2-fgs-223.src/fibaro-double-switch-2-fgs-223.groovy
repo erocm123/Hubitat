@@ -92,10 +92,35 @@ tiles(scale: 2){
     }
 }
 
+private getCommandClassVersions() {
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 2, // Configuration
+     0x98: 1, // Security
+     0x60: 3, // Multi Channel
+     0x8E: 2, // Multi Channel Association
+     0x26: 1, // Switch Multilevel
+     0x87: 1, // Indicator
+     0x72: 2, // Manufacturer Specific
+     0x5B: 1, // Central Scene
+     0x32: 3, // Meter
+     0x85: 2, // Association
+     0x86: 1, // Version
+     0x9B: 1, // Association Command Configuration
+	 0x90: 1, // Energy Production
+	 0x73: 1, // Powerlevel
+	 0x30: 1, // Sensor Binary
+	 0x28: 1, // Switch Toggle Binary
+	 0x2B: 1, // Scene Activation
+     0x75: 2  // Protection
+    ]
+}
+
 def parse(String description) {
 	//log.debug description
     def result = []
-    def cmd = zwave.parse(description)
+    def cmd = zwave.parse(description, commandClassVersions)
     if (cmd) {
         result += zwaveEvent(cmd)
         //log.debug "Parsed ${cmd} to ${result.inspect()}"
@@ -235,7 +260,7 @@ def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCapabilityRepor
 
 def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
    //logging("MultiChannelCmdEncap ${cmd}")
-   def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
+   def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
    if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
    }
@@ -437,7 +462,7 @@ private encap(cmd, endpoint) {
 
 def zwaveEvent(hubitat.zwave.commands.securityv1.SecurityMessageEncapsulation cmd) {
 	//log.debug cmd
-	def encapsulatedCommand = cmd.encapsulatedCommand([0x20: 1, 0x32: 3, 0x25: 1, 0x98: 1, 0x70: 2, 0x85: 2, 0x9B: 1, 0x90: 1, 0x73: 1, 0x30: 1, 0x28: 1, 0x2B: 1, , 0x5B: 1]) // can specify command class versions here like in zwave.parse
+	def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions) // can specify command class versions here like in zwave.parse
 	if (encapsulatedCommand) {
 	    state.sec = 1
 		return zwaveEvent(encapsulatedCommand)
