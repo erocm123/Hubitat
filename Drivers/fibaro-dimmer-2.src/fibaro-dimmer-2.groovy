@@ -367,7 +367,7 @@ def setLevel(level, duration) {
     def dimmingDuration = duration < 128 ? duration : 128 + Math.round(duration / 60)
 	logging("dimmingDuration: $dimmingDuration")
     commands([
-        zwave.switchMultilevelV1.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: dimmingDuration),
+        zwave.switchMultilevelV2.switchMultilevelSet(value: level < 100 ? level : 99, dimmingDuration: dimmingDuration),
         zwave.switchMultilevelV1.switchMultilevelGet()
     ])
 }
