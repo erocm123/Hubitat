@@ -75,7 +75,7 @@ metadata {
 
 def parse(String description) {
     def result = []
-    def cmd = zwave.parse(description)
+    def cmd = zwave.parse(description, commandClassVersions)
     if (cmd) {
         result += zwaveEvent(cmd)
         logging("Parsed ${cmd} to ${result.inspect()}", 1)
@@ -153,9 +153,22 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, ep=
     }
 }
 
+private getCommandClassVersions() {
+	[
+     0x20: 1, // Basic
+     0x25: 1, // Switch Binary
+     0x70: 2, // Configuration
+     0x8E: 2, // Multi Channel Association
+     0x60: 3, // Multi Channel
+     0x72: 2, // Manufacturer Specific
+     0x85: 2, // Association
+     0x86: 1, // Version
+    ]
+}
+
 def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
    logging("MultiChannelCmdEncap ${cmd}", 2)
-   def encapsulatedCommand = cmd.encapsulatedCommand([0x32: 3, 0x25: 1, 0x20: 1])
+   def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
    if (encapsulatedCommand) {
 		zwaveEvent(encapsulatedCommand, cmd.sourceEndPoint as Integer)
    }
