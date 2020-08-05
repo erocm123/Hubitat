@@ -1,5 +1,5 @@
 /**
- *  Copyright 2017 Eric Maycock
+ *  Copyright 2020 Eric Maycock
  *
  *  Licensed under the Apache License, Version 2.0 (the "License"); you may not use this file except
  *  in compliance with the License. You may obtain a copy of the License at:
@@ -10,6 +10,8 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
+ *  2020-08-05: Fixing error when power reports come in. Hubitat seems to not be parsing the meterValue correctly
+ *              so the power information cannot be extracted.
  */
 metadata {
 	definition (name: "Aeon SmartStrip", namespace: "erocm123", author: "Eric Maycock") {
@@ -65,7 +67,7 @@ metadata {
 	}
     
     preferences {
-        input("enableDebugging", "boolean", title:"Enable Debugging", value:false, required:false, displayDuringSetup:false)
+        input("enableDebugging", "bool", title:"Enable Debugging", value:false, required:false, displayDuringSetup:false)
     }
 
 	// tile definitions
@@ -162,7 +164,7 @@ def parse(String description) {
     
     def statusTextmsg = ""
     if (device.currentState('power') && device.currentState('energy')) statusTextmsg = "${device.currentState('power').value} W ${device.currentState('energy').value} kWh"
-    sendEvent(name:"statusText", value:statusTextmsg, displayed:false)
+    //sendEvent(name:"statusText", value:statusTextmsg, displayed:false)
     
     //log.debug "parsed '${description}' to ${result.inspect()}"
 
@@ -241,13 +243,19 @@ def zwaveEvent(hubitat.zwave.commands.switchbinaryv1.SwitchBinaryReport cmd, end
 
 def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep) {
     logging("MeterReport")
+    def value = 0
+    try {
+        value = cmd.scaledMeterValue? cmd.scaledMeterValue : 0
+    } catch(Exception e) {
+        value = 0
+    }
 	def event = [:]
 	def cmds = []
 	if (cmd.scale < 2) {
-		def val = Math.round((cmd.scaledMeterValue? cmd.scaledMeterValue : 0)*100)/100
+		def val = Math.round(value*100)/100
 		event = endpointEvent(ep, [name: "energy", value: val, unit: ["kWh", "kVAh"][cmd.scale]])
 	} else {
-		def val = Math.round((cmd.scaledMeterValue? cmd.scaledMeterValue : 0)*100)/100
+		def val = Math.round(value*100)/100
 		event = endpointEvent(ep, [name: "power", value: val, unit: "W"])
 	}
     
