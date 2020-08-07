@@ -200,7 +200,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.multichannelassociationv2.MultiChannelAssociationReport cmd) {
 	log.debug "MultiChannelAssociationReport $cmd"
     if (cmd.groupingIdentifier == 1) {
-        if ([0,zwaveHubNodeId,1] == cmd.nodeId) state."associationMC${cmd.groupingIdentifier}" = true
+        if ([0,zwaveHubNodeId,0] == cmd.nodeId) state."associationMC${cmd.groupingIdentifier}" = true
         else state."associationMC${cmd.groupingIdentifier}" = false
     }
 }
@@ -411,7 +411,7 @@ def update_needed_settings()
         if(!state.associationMC1) {
            logging("Adding MultiChannel association group 1", 1)
            cmds << zwave.associationV2.associationRemove(groupingIdentifier: 1, nodeId: [])
-           cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
+           cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,0])
            cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 1)
         }
     } else {           
