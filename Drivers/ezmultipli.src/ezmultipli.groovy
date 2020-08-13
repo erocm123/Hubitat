@@ -110,6 +110,7 @@ metadata {
        input("lum", "enum", title:"Illuminance Measurement", description: "Percent or Lux", defaultValue: 1 ,required: false, displayDuringSetup: true, options:
           [1:"Percent",
            2:"Lux"])
+       input name: "debugEnable", type: "bool", title: "Enable Debug Logging", defaultValue: true
   }
 
 } // end metadata
@@ -128,7 +129,7 @@ def parse(String description){
                 statusTextmsg = "${device.currentState('temperature').value} °F - ${device.currentState('illuminance').value} ${(lum == "" || lum == null || lum == 1) ? "%" : "LUX"}"
         sendEvent("name":"statusText", "value":statusTextmsg, displayed:false)
         }
-    if (result != [null]) log.debug "Parse returned ${result}"
+    if (result != [null]) if (debugEnable) log.debug "Parse returned ${result}"
 
 
         return result
@@ -144,21 +145,21 @@ def zwaveEvent(hubitat.zwave.commands.sensormultilevelv5.SensorMultilevelReport 
                         map.value = convertTemperatureIfNeeded(cmd.scaledSensorValue, cmdScale, cmd.precision)
                         map.unit = getTemperatureScale()
                         map.name = "temperature"
-                        log.debug "Temperature report"
+                        if (debugEnable) log.debug "Temperature report"
                         break;
                 case 0x03 :                             // SENSOR_TYPE_LUMINANCE_VERSION_1
                         map.value = cmd.scaledSensorValue.toInteger().toString()
             if(lum == "" || lum == null || lum == 1) map.unit = "%"
             else map.unit = "lux"
                         map.name = "illuminance"
-                        log.debug "Luminance report"
+                        if (debugEnable) log.debug "Luminance report"
                         break;
         }
         return map
 }
 
 def zwaveEvent(hubitat.zwave.commands.configurationv2.ConfigurationReport cmd) {
-    log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd.configurationValue}'"
+    if (debugEnable) log.debug "${device.displayName} parameter '${cmd.parameterNumber}' with a byte size of '${cmd.size}' is set to '${cmd.configurationValue}'"
 }
 
 def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
@@ -168,16 +169,16 @@ def zwaveEvent(hubitat.zwave.commands.notificationv3.NotificationReport cmd) {
                         map.name = "motion"
                 map.value = "active"
                         map.descriptionText = "$device.displayName motion detected"
-                log.debug "motion recognized"
+                if (debugEnable) log.debug "motion recognized"
                 } else if (cmd.event==0) {
                         map.name = "motion"
                 map.value = "inactive"
                         map.descriptionText = "$device.displayName no motion detected"
-                log.debug "No motion recognized"
+                if (debugEnable) log.debug "No motion recognized"
                 }
         }
         if (map.name != "motion") {
-                log.debug "unmatched parameters for cmd: ${cmd.toString()}}"
+                if (debugEnable) log.debug "unmatched parameters for cmd: ${cmd.toString()}}"
         }
         return map
 }
@@ -188,32 +189,32 @@ def zwaveEvent(hubitat.zwave.commands.basicv1.BasicReport cmd) {
 
 def updated()
 {
-    log.debug "updated() is being called"
+    if (debugEnable) log.debug "updated() is being called"
     sendEvent(name: "checkInterval", value: 2 * 60 * 60 + 2 * 60, displayed: false, data: [protocol: "zwave", hubHardwareId: device.hub.hardwareID])
     def cmds = configure()
 
-    if (cmds != []) cmds
+    if (cmds != []) commands(cmds)
 }
 
 def on() {
-        log.debug "Turning Light 'on'"
-        delayBetween([
-                zwave.basicV1.basicSet(value: 0xFF).format(),
-                zwave.basicV1.basicGet().format()
+        if (debugEnable) log.debug "Turning Light 'on'"
+        commands([
+                zwave.basicV1.basicSet(value: 0xFF),
+                zwave.basicV1.basicGet()
         ], 500)
 }
 
 def off() {
-        log.debug "Turning Light 'off'"
-        delayBetween([
-                zwave.basicV1.basicSet(value: 0x00).format(),
-                zwave.basicV1.basicGet().format()
+        if (debugEnable) log.debug "Turning Light 'off'"
+        commands([
+                zwave.basicV1.basicSet(value: 0x00),
+                zwave.basicV1.basicGet()
         ], 500)
 }
 
 
 def setColor(value) {
-    log.debug "setColor() : ${value}"
+    if (debugEnable) log.debug "setColor() : ${value}"
     def myred
     def mygreen
     def myblue
@@ -261,16 +262,16 @@ def setColor(value) {
         cmds << "330704"
     }
     cmds << "delay 100"
-    cmds << zwave.basicV1.basicGet().format()
+    cmds << zwave.basicV1.basicGet()
 
     hexValue = rgbToHex([r:myred, g:mygreen, b:myblue])
     if(hexValue) sendEvent(name: "color", value: hexValue, displayed: true)
-	cmds
+	commands(cmds)
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
         // Handles all Z-Wave commands we aren't interested in
-    log.debug cmd
+    if (debugEnable) log.debug cmd
         [:]
 }
 
@@ -348,34 +349,94 @@ def checkTempAdjInput(value) {
 }
 
 def refresh() {
-        def cmd = []
-    cmd << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1).format()
-    cmd << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1).format()
-    cmd << zwave.basicV1.basicGet().format()
-    delayBetween(cmd, 1000)
+    def cmds = []
+    cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:1, scale:1)
+    cmds << zwave.sensorMultilevelV5.sensorMultilevelGet(sensorType:3, scale:1)
+    cmds << zwave.basicV1.basicGet()
+    return commands(cmds, 1000)
 }
 
 def ping() {
-    log.debug "ping()"
+    if (debugEnable) log.debug "ping()"
         refresh()
 }
 
 def configure() {
-        log.debug "OnTime=${settings.OnTime} OnLevel=${settings.OnLevel} TempAdj=${settings.TempAdj}"
-        def cmd = delayBetween([
-                zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, scaledConfigurationValue: checkOnTimeInput(settings.OnTime)).format(),
-                zwave.configurationV1.configurationSet(parameterNumber: 2, size: 1, scaledConfigurationValue: checkOnLevelInput(settings.OnLevel)).format(),
-                zwave.configurationV1.configurationSet(parameterNumber: 3, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.LiteMin)).format(),
-                zwave.configurationV1.configurationSet(parameterNumber: 4, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.TempMin)).format(),
-                zwave.configurationV1.configurationSet(parameterNumber: 5, size: 1, scaledConfigurationValue: checkTempAdjInput(settings.TempAdj)).format(),
-                zwave.configurationV1.configurationGet(parameterNumber: 1).format(),
-                zwave.configurationV1.configurationGet(parameterNumber: 2).format(),
-                zwave.configurationV1.configurationGet(parameterNumber: 3).format(),
-                zwave.configurationV1.configurationGet(parameterNumber: 4).format(),
-                zwave.configurationV1.configurationGet(parameterNumber: 5).format()
-        ], 100)
-        //log.debug cmd
-        cmd
+        if (debugEnable) log.debug "OnTime=${settings.OnTime} OnLevel=${settings.OnLevel} TempAdj=${settings.TempAdj}"
+        def cmds = ([
+                zwave.configurationV1.configurationSet(parameterNumber: 1, size: 1, scaledConfigurationValue: checkOnTimeInput(settings.OnTime)),
+                zwave.configurationV1.configurationSet(parameterNumber: 2, size: 1, scaledConfigurationValue: checkOnLevelInput(settings.OnLevel)),
+                zwave.configurationV1.configurationSet(parameterNumber: 3, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.LiteMin)),
+                zwave.configurationV1.configurationSet(parameterNumber: 4, size: 1, scaledConfigurationValue: checkLiteTempInput(settings.TempMin)),
+                zwave.configurationV1.configurationSet(parameterNumber: 5, size: 1, scaledConfigurationValue: checkTempAdjInput(settings.TempAdj)),
+                zwave.configurationV1.configurationGet(parameterNumber: 1),
+                zwave.configurationV1.configurationGet(parameterNumber: 2),
+                zwave.configurationV1.configurationGet(parameterNumber: 3),
+                zwave.configurationV1.configurationGet(parameterNumber: 4),
+                zwave.configurationV1.configurationGet(parameterNumber: 5)
+        ])
+        //if (debugEnable) log.debug cmds
+        return commands(cmds)
+}
+
+private command(hubitat.zwave.Command cmd) {
+    if (getDataValue("zwaveSecurePairingComplete") != "true") {
+        return cmd.format()
+    }
+    Short S2 = getDataValue("S2")?.toInteger()
+    String encap = ""
+    String keyUsed = "S0"
+    if (S2 == null) { //S0 existing device
+        encap = "988100"
+    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
+        keyUsed = "S2_ACCESS_CONTROL"
+        encap = "9F0304"
+    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
+        keyUsed = "S2_AUTHENTICATED"
+        encap = "9F0302"
+    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
+        keyUsed = "S2_UNAUTHENTICATED"
+        encap = "9F0301"
+    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
+        encap = "988100"
+    }
+    return "${encap}${cmd.format()}"
+}
+
+private command(String cmd) {
+    if (getDataValue("zwaveSecurePairingComplete") != "true") {
+        return cmd
+    }
+    Short S2 = getDataValue("S2")?.toInteger()
+    String encap = ""
+    String keyUsed = "S0"
+    if (S2 == null) { //S0 existing device
+        encap = "988100"
+    } else if ((S2 & 0x04) == 0x04) { //S2_ACCESS_CONTROL
+        keyUsed = "S2_ACCESS_CONTROL"
+        encap = "9F0304"
+    } else if ((S2 & 0x02) == 0x02) { //S2_AUTHENTICATED
+        keyUsed = "S2_AUTHENTICATED"
+        encap = "9F0302"
+    } else if ((S2 & 0x01) == 0x01) { //S2_UNAUTHENTICATED
+        keyUsed = "S2_UNAUTHENTICATED"
+        encap = "9F0301"
+    } else if ((S2 & 0x80) == 0x80) { //S0 on C7
+        encap = "988100"
+    }
+    return "${encap}${cmd}"
+}
+
+void zwaveEvent(hubitat.zwave.commands.supervisionv1.SupervisionGet cmd){
+    hubitat.zwave.Command encapCmd = cmd.encapsulatedCommand(commandClassVersions)
+    if (encapCmd) {
+        zwaveEvent(encapCmd)
+    }
+    sendHubCommand(new hubitat.device.HubAction(command(zwave.supervisionV1.supervisionReport(sessionID: cmd.sessionID, reserved: 0, moreStatusUpdates: false, status: 0xFF, duration: 0)), hubitat.device.Protocol.ZWAVE))
+}
+
+private commands(commands, delay=1000) {
+    delayBetween(commands.collect{ command(it) }, delay)
 }
 
 def huesatToRGB(float hue, float sat) {
