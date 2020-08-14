@@ -28,7 +28,6 @@ definition (name: "Fibaro Double Switch 2 FGS-223", namespace: "erocm123", autho
     capability "Polling"
     capability "Configuration"
     capability "Refresh"
-    //capability "Zw Multichannel"
     capability "Energy Meter"
     capability "Power Meter"
     capability "Health Check"
@@ -275,7 +274,7 @@ def zwaveEvent(hubitat.zwave.commands.associationv2.AssociationReport cmd) {
 def zwaveEvent(hubitat.zwave.commands.multichannelassociationv2.MultiChannelAssociationReport cmd) {
 	log.debug "MultiChannelAssociationReport $cmd"
     if (cmd.groupingIdentifier == 1) {
-        if ([0,zwaveHubNodeId,1] == cmd.nodeId) state."associationMC${cmd.groupingIdentifier}" = true
+        if ([0,zwaveHubNodeId,0] == cmd.nodeId) state."associationMC${cmd.groupingIdentifier}" = true
         else state."associationMC${cmd.groupingIdentifier}" = false
     }
 }
@@ -550,7 +549,7 @@ def update_needed_settings()
        logging("Adding MultiChannel association group 1")
        cmds << zwave.associationV2.associationRemove(groupingIdentifier: 1, nodeId: [])
 	   //cmds << zwave.associationV2.associationGet(groupingIdentifier: 1)
-       cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,1])
+       cmds << zwave.multiChannelAssociationV2.multiChannelAssociationSet(groupingIdentifier: 1, nodeId: [0,zwaveHubNodeId,0])
        cmds << zwave.multiChannelAssociationV2.multiChannelAssociationGet(groupingIdentifier: 1)
     }
     if(state.association2){
