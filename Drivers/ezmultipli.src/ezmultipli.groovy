@@ -245,28 +245,24 @@ def setColor(value) {
         myblue=value.blue>=128 ? 255 : 0
     }
     cmds << "200100"
-    cmds << "delay 250"
 	if (myred!=0) {
         cmds << "33060002FF"
-		//cmds << "delay 150"
         cmds << "330702"
     }
     if (mygreen!=0) {
         cmds << "33060003FF"
-		//cmds << "delay 150"
         cmds << "330703"
     }
     if (myblue!=0) {
         cmds << "3306000400"
-		//cmds << "delay 150"
         cmds << "330704"
     }
-    cmds << "delay 100"
-    cmds << zwave.basicV1.basicGet()
+
+    cmds << command(zwave.basicV1.basicGet())
 
     hexValue = rgbToHex([r:myred, g:mygreen, b:myblue])
     if(hexValue) sendEvent(name: "color", value: hexValue, displayed: true)
-	commands(cmds)
+	commands(cmds, 300)
 }
 
 def zwaveEvent(hubitat.zwave.Command cmd) {
