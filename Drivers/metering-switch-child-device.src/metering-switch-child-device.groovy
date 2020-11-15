@@ -18,6 +18,8 @@ metadata {
 		capability "Switch"
 		capability "Actuator"
 		capability "Sensor"
+		capability "Bulb"
+		capability "Light"
         capability "Energy Meter"
         capability "Power Meter"
         capability "Refresh"
