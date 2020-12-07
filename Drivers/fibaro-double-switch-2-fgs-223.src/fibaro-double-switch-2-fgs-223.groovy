@@ -238,9 +238,9 @@ def zwaveEvent(hubitat.zwave.commands.meterv3.MeterReport cmd, ep=null) {
     }
 }
 
-def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCapabilityReport cmd) 
+def zwaveEvent(hubitat.zwave.commands.multichannelv4.MultiChannelCapabilityReport cmd) 
 {
-    //log.debug "multichannelv3.MultiChannelCapabilityReport $cmd"
+    //log.debug "multichannelv4.MultiChannelCapabilityReport $cmd"
     if (cmd.endPoint == 2 ) {
         def currstate = device.currentState("switch2").getValue()
         if (currstate == "on")
@@ -257,7 +257,7 @@ def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCapabilityRepor
     }
 }
 
-def zwaveEvent(hubitat.zwave.commands.multichannelv3.MultiChannelCmdEncap cmd) {
+def zwaveEvent(hubitat.zwave.commands.multichannelv4.MultiChannelCmdEncap cmd) {
    //logging("MultiChannelCmdEncap ${cmd}")
    def encapsulatedCommand = cmd.encapsulatedCommand(commandClassVersions)
    if (encapsulatedCommand) {
@@ -453,7 +453,7 @@ private commands(commands, delay=1000) {
 
 private encap(cmd, endpoint) {
 	if (endpoint) {
-		zwave.multiChannelV3.multiChannelCmdEncap(destinationEndPoint:endpoint).encapsulate(cmd)
+		zwave.multiChannelV4.multiChannelCmdEncap(destinationEndPoint:endpoint).encapsulate(cmd)
 	} else {
 		cmd
 	}
