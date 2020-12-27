@@ -97,7 +97,7 @@ private getCommandClassVersions() {
      0x25: 1, // Switch Binary
      0x70: 2, // Configuration
      0x98: 1, // Security
-     0x60: 3, // Multi Channel
+     0x60: 4, // Multi Channel
      0x8E: 2, // Multi Channel Association
      0x26: 1, // Switch Multilevel
      0x87: 1, // Indicator
@@ -107,11 +107,11 @@ private getCommandClassVersions() {
      0x85: 2, // Association
      0x86: 1, // Version
      0x9B: 1, // Association Command Configuration
-	 0x90: 1, // Energy Production
-	 0x73: 1, // Powerlevel
-	 0x30: 1, // Sensor Binary
-	 0x28: 1, // Switch Toggle Binary
-	 0x2B: 1, // Scene Activation
+     0x90: 1, // Energy Production
+     0x73: 1, // Powerlevel
+     0x30: 1, // Sensor Binary
+     0x28: 1, // Switch Toggle Binary
+     0x2B: 1, // Scene Activation
      0x75: 2  // Protection
     ]
 }
